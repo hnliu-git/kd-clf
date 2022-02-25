@@ -1,0 +1,20 @@
+
+# Data module configs
+data:
+  batch_size: 32
+  tokenizer: bert-base-cased
+
+# Distillation configs
+training:
+  learning_rate: 2e-5
+
+# Weight-and-bias config
+wandb:
+  project: finetune
+  exp: bert-base-cased
+
+# Setting pre-trained model
+model: bert-base-cased
+ckpt_path: ckpts/
+
+
