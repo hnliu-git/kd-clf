@@ -28,6 +28,7 @@ class BertBaseKD(LightningModule):
                             help="Number of attention heads")
         parser.add_argument("--weight_decay", default=5e-5, type=float)
         parser.add_argument("--learning_rate", default=1e-4, type=float)
+        parser.add_argument("--eps", default=1e-8, type=float)
         parser.add_argument("--num_classes", default=2, type=int)
 
         return parser
@@ -78,21 +79,32 @@ class BertBaseKD(LightningModule):
         return teacher_out, student_out
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.student.parameters(), lr=self.hparams.learning_rate)
-        fn_lambda = lambda epoch: 0.95 ** epoch
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [fn_lambda])
-        return {'optimizer': optimizer, 'scheduler': scheduler}
+        no_decay = ["bias", "LayerNorm.weight"]
+        optimizer_grouped_parameters = [
+            {
+                "params": [p for n, p in self.student.named_parameters() if not any(nd in n for nd in no_decay)],
+                "weight_decay": self.hparams.weight_decay,
+            },
+            {
+                "params": [p for n, p in self.student.named_parameters() if any(nd in n for nd in no_decay)],
+                "weight_decay": 0.0,
+            },
+        ]
+
+        optimizer = torch.optim.AdamW(optimizer_grouped_parameters,
+                                      lr=self.hparams.learning_rate,
+                                      eps=self.hparams.eps, )
+
+        fn_lambda = lambda epoch: 0.85 ** epoch
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [fn_lambda, fn_lambda])
+        return [optimizer], [scheduler]
 
     def training_step(self, batch, idx):
         s_nll_loss, t_nll_loss, mse_loss = self._calculate_loss(*self(batch))
         self.log('s_nll_loss', s_nll_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         self.log('t_nll_loss', t_nll_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         self.log('mse_loss', mse_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
-        return s_nll_loss + t_nll_loss + mse_loss
-
-    def on_validation_epoch_start(self):
-        self.student.eval()
-        self.teacher.eval()
+        return t_nll_loss + mse_loss
 
     def validation_step(self, batch, idx):
         labels = batch['label']
