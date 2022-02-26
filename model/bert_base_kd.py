@@ -20,12 +20,14 @@ class BertBaseKD(LightningModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--teacher_model", default='bert-base-uncased', type=str,
                             help="name of the teacher model")
+        parser.add_argument("--student_model", default='google/bert_uncased_L-2_H-512_A-8', type=str,
+                            help="pretrained student model, the default is the bert_tiny model")
         parser.add_argument("--hidden_size", default=768, type=int,
-                            help="Dim of the encoder layer and pooler layer")
+                            help="Dim of the encoder layer and pooler layer of the student")
         parser.add_argument("--hidden_layers", default=12, type=int,
-                            help="Number of hidden layers in encoder")
+                            help="Number of hidden layers in encoder of the student")
         parser.add_argument("--atten_heads", default=12, type=int,
-                            help="Number of attention heads")
+                            help="Number of attention heads of the student")
         parser.add_argument("--weight_decay", default=5e-5, type=float)
         parser.add_argument("--learning_rate", default=1e-4, type=float)
         parser.add_argument("--eps", default=1e-8, type=float)
@@ -38,20 +40,23 @@ class BertBaseKD(LightningModule):
         self.save_hyperparameters(args)
 
         # Setting up student
-        config = BertConfig(
-            hidden_size=args.hidden_size,
-            num_hidden_layers=args.hidden_layers,
-            num_attention_heads=args.atten_heads
-        )
-        self.student = BertForSequenceClassification(config)
+        if 'student_model' in args:
+            self.student = AutoModelForSequenceClassification.from_pretrained(args.student_model)
+        else:
+            config = BertConfig(
+                hidden_size=args.hidden_size,
+                num_hidden_layers=args.hidden_layers,
+                num_attention_heads=args.atten_heads
+            )
+            self.student = BertForSequenceClassification(config)
+
         self.teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model)
-        self.teacher.eval()
 
         # Metrics
         self.s_acc = torchmetrics.Accuracy(num_classes=args.num_classes)
-        self.s_f1 = torchmetrics.F1Score(num_classes=args.num_classes)
+        # self.s_f1 = torchmetrics.F1Score(num_classes=args.num_classes)
         self.t_acc = torchmetrics.Accuracy(num_classes=args.num_classes)
-        self.t_f1 = torchmetrics.F1Score(num_classes=args.num_classes)
+        # self.t_f1 = torchmetrics.F1Score(num_classes=args.num_classes)
 
     def _calculate_loss(self, t_out, s_out):
         s_nll_loss = s_out.loss
@@ -99,6 +104,9 @@ class BertBaseKD(LightningModule):
         scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [fn_lambda, fn_lambda])
         return [optimizer], [scheduler]
 
+    def on_train_start(self) -> None:
+        self.teacher.eval()
+
     def training_step(self, batch, idx):
         s_nll_loss, t_nll_loss, mse_loss = self._calculate_loss(*self(batch))
         self.log('s_nll_loss', s_nll_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
@@ -111,14 +119,13 @@ class BertBaseKD(LightningModule):
         t_out, s_out = self(batch)
         s_pred = torch.argmax(s_out.logits, dim=1)
         t_pred = torch.argmax(t_out.logits, dim=1)
-        self.s_f1(s_pred, labels)
+        # self.s_f1(s_pred, labels)
         self.s_acc(s_pred, labels)
-        self.t_f1(t_pred, labels)
+        # self.t_f1(t_pred, labels)
         self.t_acc(t_pred, labels)
 
     def validation_epoch_end(self, outputs) -> None:
         self.log('acc_T_epoch', self.t_acc)
-        self.log('f1_T_epoch', self.t_f1)
+        # self.log('f1_T_epoch', self.t_f1)
         self.log('acc_S_epoch', self.s_acc)
-        self.log('f1_S_epoch', self.s_f1)
-        self.teacher.eval()
+        # self.log('f1_S_epoch', self.s_f1)
