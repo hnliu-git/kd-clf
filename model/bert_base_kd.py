@@ -20,7 +20,7 @@ class BertBaseKD(LightningModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--teacher_model", default='bert-base-uncased', type=str,
                             help="name of the teacher model")
-        parser.add_argument("--student_model", default='google/bert_uncased_L-2_H-512_A-8', type=str,
+        parser.add_argument("--student_model", default=None, type=str,
                             help="pretrained student model, the default is the bert_tiny model")
         parser.add_argument("--hidden_size", default=768, type=int,
                             help="Dim of the encoder layer and pooler layer of the student")
@@ -40,7 +40,7 @@ class BertBaseKD(LightningModule):
         self.save_hyperparameters(args)
 
         # Setting up student
-        if 'student_model' in args:
+        if args.student_model:
             self.student = AutoModelForSequenceClassification.from_pretrained(args.student_model)
         else:
             config = BertConfig(

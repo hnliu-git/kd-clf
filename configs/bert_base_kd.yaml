@@ -11,19 +11,19 @@ distillation:
 # Weight-and-bias config
 wandb:
   project: knowledge-distillation
-  exp: base2tiny-pt
+  exp: base2tiny-rand
 
 # Setting pre-trained teacher
 teacher_model: ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Custom student randomly initialized
-#student_model:
-#  hidden_size: 512
-#  hidden_layers: 2
-#  atten_heads: 8
+student_model:
+  hidden_size: 512
+  hidden_layers: 2
+  atten_heads: 8
 
 # Pre-trained student
-student_model: google/bert_uncased_L-2_H-512_A-8
+#student_model: google/bert_uncased_L-2_H-512_A-8
 
 
 
