@@ -8,7 +8,7 @@ from pytorch_lightning import Trainer
 from data.data_module import ClfDataModule
 from model.bert_base_kd import BertBaseKD
 from pytorch_lightning.loggers import WandbLogger
-
+from pytorch_lightning.callbacks import EarlyStopping
 
 def get_args(yaml_path):
     parser = ArgumentParser()
@@ -36,7 +36,17 @@ if __name__ == '__main__':
 
     dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
     model = BertBaseKD(args)
-    trainer = Trainer(gpus=1, logger=wandb_logger)
+
+    early_stopping = EarlyStopping(
+        mode='min',
+        patience=6,
+        min_delta=0.01,
+        monitor='val_nll_loss'
+    )
+
+    trainer = Trainer(gpus=1,
+                      logger=wandb_logger,
+                      callbacks=[early_stopping])
 
     trainer.fit(model, dm)
 

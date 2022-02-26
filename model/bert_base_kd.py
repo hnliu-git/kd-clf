@@ -53,19 +53,19 @@ class BertBaseKD(LightningModule):
         self.teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model)
 
         # Metrics
-        self.s_acc = torchmetrics.Accuracy(num_classes=args.num_classes)
+        self.acc_s = torchmetrics.Accuracy(num_classes=args.num_classes)
         # self.s_f1 = torchmetrics.F1Score(num_classes=args.num_classes)
-        self.t_acc = torchmetrics.Accuracy(num_classes=args.num_classes)
+        self.acc_t = torchmetrics.Accuracy(num_classes=args.num_classes)
         # self.t_f1 = torchmetrics.F1Score(num_classes=args.num_classes)
 
-    def _calculate_loss(self, t_out, s_out):
-        s_nll_loss = s_out.loss
-        t_nll_loss = t_out.loss
+    def _calculate_loss(self, out_t, out_s):
+        nll_loss_s = out_s.loss
+        nll_loss_t = out_t.loss
 
-        t_score = t_out.logits
-        s_score = s_out.logits
-        mse_loss = F.mse_loss(t_score, s_score)
-        return s_nll_loss, t_nll_loss, mse_loss
+        score_t = out_t.logits
+        score_s = out_s.logits
+        mse_loss = F.mse_loss(score_t, score_s)
+        return nll_loss_t, nll_loss_s, mse_loss
 
     def forward(self, batch):
         """
@@ -108,24 +108,28 @@ class BertBaseKD(LightningModule):
         self.teacher.eval()
 
     def training_step(self, batch, idx):
-        s_nll_loss, t_nll_loss, mse_loss = self._calculate_loss(*self(batch))
-        self.log('s_nll_loss', s_nll_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
-        self.log('t_nll_loss', t_nll_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        nll_loss_t, nll_loss_s, mse_loss = self._calculate_loss(*self(batch))
+        self.log('nll_loss_t', nll_loss_t, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        self.log('nll_loss_s', nll_loss_s, on_step=True, on_epoch=False, prog_bar=True, logger=True)
         self.log('mse_loss', mse_loss, on_step=True, on_epoch=False, prog_bar=True, logger=True)
-        return t_nll_loss + mse_loss
+        return nll_loss_s + mse_loss
 
     def validation_step(self, batch, idx):
         labels = batch['label']
-        t_out, s_out = self(batch)
-        s_pred = torch.argmax(s_out.logits, dim=1)
-        t_pred = torch.argmax(t_out.logits, dim=1)
+        out_t, out_s = self(batch)
+        pred_t = torch.argmax(out_t.logits, dim=1)
+        pred_s = torch.argmax(out_s.logits, dim=1)
         # self.s_f1(s_pred, labels)
-        self.s_acc(s_pred, labels)
         # self.t_f1(t_pred, labels)
-        self.t_acc(t_pred, labels)
+        self.acc_t(pred_t, labels)
+        self.acc_s(pred_s, labels)
+
+        return {'val_nll_loss': out_s.loss}
 
     def validation_epoch_end(self, outputs) -> None:
-        self.log('acc_T_epoch', self.t_acc)
+        val_loss = torch.stack([x["val_nll_loss"] for x in outputs]).mean()
+        self.log("val_nll_loss", val_loss, prog_bar=True, logger=True)
+        self.log('val_acc_t', self.acc_t)
+        self.log('val_acc_s', self.acc_s)
         # self.log('f1_T_epoch', self.t_f1)
-        self.log('acc_S_epoch', self.s_acc)
         # self.log('f1_S_epoch', self.s_f1)
