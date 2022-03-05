@@ -107,7 +107,7 @@ if __name__ == '__main__':
     )
 
     trainer = Trainer(gpus=1,
-                      # logger=wandb_logger,
+                      logger=wandb_logger,
                       callbacks=[early_stopping])
 
     trainer.fit(distiller, dm)
