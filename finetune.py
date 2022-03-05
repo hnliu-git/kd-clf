@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from data.data_module import ClfDataModule
 from pytorch_lightning.loggers import WandbLogger
-from model.model_finetune import ClfFinetune, HgCkptIO
+from model.finetuner import ClfFinetune, HgCkptIO
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 
 

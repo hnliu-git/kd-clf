@@ -5,25 +5,27 @@ data:
   tokenizer: google/bert_uncased_L-2_H-128_A-2
 
 # Distillation configs
+
 distillation:
   learning_rate: 3e-5
+  loss_list: ['pred:mse', 'attn:mse', 'hidn:mse']
 
 # Weight-and-bias config
 wandb:
   project: knowledge-distillation
-  exp: base2tiny-pt
+  exp: base2tiny-trm-test
 
 # Setting pre-trained teacher
 teacher_model: ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Custom student randomly initialized
-#student_model:
-#  hidden_size: 128
-#  hidden_layers: 2
-#  atten_heads: 2
+student_model:
+  hidden_size: 312
+  hidden_layers: 4
+  atten_heads: 12
 
 # Pre-trained student
-student_model: google/bert_uncased_L-2_H-128_A-2
+#student_model: google/bert_uncased_L-2_H-128_A-2
 
 
 
