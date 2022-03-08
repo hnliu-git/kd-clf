@@ -8,7 +8,7 @@ data:
 
 distillation:
   learning_rate: 3e-5
-  loss_list: ['attn:mse', 'hidn:mse', 'embd:mse']
+  loss_list: ['pred:nll', 'attn:mse', 'hidn:mse', 'embd:mse']
 
 # Weight-and-bias config
 wandb:

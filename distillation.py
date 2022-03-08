@@ -90,7 +90,7 @@ if __name__ == '__main__':
     # Setup adaptor
     attn_adaptor = AttnMiniLMAdaptor()
     # w_hidn = torch.rand(teacher.config.hidden_size, student.config.hidden_size, requires_grad=True).cuda()
-    hidn_adaptor = MiniLMHidnAdaptor()
+    hidn_adaptor = HidnRelnAdaptor()
 
     # Setup lightning
     distiller = BaseDistiller(teacher,

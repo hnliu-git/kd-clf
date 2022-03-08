@@ -61,7 +61,7 @@ class HidnAdaptor(Module):
         return hidn_t, hidn_s
 
 
-class MiniLMHidnAdaptor():
+class HidnRelnAdaptor():
 
     def __init__(self):
         pass
