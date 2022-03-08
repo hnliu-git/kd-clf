@@ -50,6 +50,9 @@ class BaseDistiller(LightningModule):
         for loss_name in self.hparams.loss_list:
             name, func = loss_name.split(':')
             if name == 'pred':
+                if func == 'nll':
+                    loss_dict['pred:nll'] = out_s.loss
+                    continue
                 score_t = out_t.logits
                 score_s = out_s.logits
                 loss = self.loss_func[func](score_t, score_s)
@@ -73,7 +76,6 @@ class BaseDistiller(LightningModule):
                 loss = self.loss_func[func](tsr_t, tsr_s)
                 loss_dict[name + ':' + func] = loss
 
-        loss_dict['pred:nll'] = out_s.loss
         nll_t = out_t.loss
 
         return loss_dict, nll_t
