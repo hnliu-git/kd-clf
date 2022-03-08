@@ -67,8 +67,8 @@ class BaseDistiller(LightningModule):
                 loss = self.loss_func[func](tsr_t, tsr_s)
                 loss_dict[name + ':' + func] = loss
             elif name == 'embd':
-                embd_t = out_t.hidden_states[:0]
-                embd_s = out_s.hidden_states[:0]
+                embd_t = out_t.hidden_states[0:1]
+                embd_s = out_s.hidden_states[0:1]
                 tsr_t, tsr_s = self.hidn_adaptor(embd_t, embd_s)
                 loss = self.loss_func[func](tsr_t, tsr_s)
                 loss_dict[name + ':' + func] = loss
