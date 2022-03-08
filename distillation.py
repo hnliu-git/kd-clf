@@ -79,7 +79,7 @@ if __name__ == '__main__':
     args = get_args('configs/bert_base_kd.yaml')
 
     # Logger
-    # wandb_logger = WandbLogger(project=args.project, name=args.exp)
+    wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
     # Data Module
     dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     )
 
     trainer = Trainer(gpus=1,
-                      # logger=wandb_logger,
+                      logger=wandb_logger,
                       callbacks=[early_stopping])
 
     trainer.fit(distiller, dm)
