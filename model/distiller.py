@@ -42,6 +42,7 @@ class BaseDistiller(LightningModule):
         # loss functions
         self.loss_func = {
             'mse': F.mse_loss,
+            'kld': F.kl_div
         }
 
     def compute_loss(self, out_t, out_s):

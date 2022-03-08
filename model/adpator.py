@@ -3,6 +3,24 @@ import torch
 from torch.nn import Module
 
 
+class AttnMiniLMAdaptor:
+
+    def __init__(self):
+        pass
+
+    def __call__(self, attn_t, attn_s):
+        """
+        MiniLM method: only calculate the attention loss of the last layer, use KL Divergence
+        :param Tuple attn_t: contains tensors of shape  (*batch_size*, *num_heads*, *length*, *length*)
+        :param Tuple attn_s: contains tensors of shape  (*batch_size*, *num_heads*, *length*, *length*)
+        :return:
+        """
+        attn_t = torch.cat(attn_t[-1:])
+        attn_s = torch.cat(attn_s[-1:])
+
+        return attn_t, attn_s
+
+
 class AttnAdaptor:
 
     def __init__(self):
@@ -39,6 +57,21 @@ class HidnAdaptor(Module):
         hidn_t = torch.matmul(hidn_t, self.w['hidn'])
 
         return hidn_t, hidn_s
+
+
+class MiniLMHidnAdaptor():
+
+    def __init__(self):
+        pass
+
+    def __call__(self, hidn_t, hidn_s):
+        hidn_t = hidn_t[-1]
+        hidn_s = hidn_s[-1]
+
+        reln_t = torch.bmm(hidn_t, hidn_t.transpose(1, 2)) / hidn_t.size(2)
+        reln_s = torch.bmm(hidn_s, hidn_s.transpose(1, 2)) / hidn_s.size(2)
+
+        return reln_t, reln_s
 
 
 
