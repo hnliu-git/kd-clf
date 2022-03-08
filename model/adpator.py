@@ -17,6 +17,8 @@ class AttnMiniLMAdaptor:
         """
         attn_t = torch.cat(attn_t[-1:])
         attn_s = torch.cat(attn_s[-1:])
+        attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
+        attn_s = torch.where(attn_s <= -1e-3, torch.zeros_like(attn_s), attn_s)
 
         return attn_t, attn_s
 
@@ -37,8 +39,8 @@ class AttnAdaptor:
         '''
         attn_t = torch.cat(attn_t[:len(attn_s)])
         attn_s = torch.cat(attn_s)
-        # attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
-        # attn_s = torch.where(attn_s <= -1e-3, torch.zeros_like(attn_s), attn_s)
+        attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
+        attn_s = torch.where(attn_s <= -1e-3, torch.zeros_like(attn_s), attn_s)
 
         return attn_t, attn_s
 
