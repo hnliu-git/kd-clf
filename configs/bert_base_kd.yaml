@@ -8,7 +8,7 @@ data:
 
 distillation:
   learning_rate: 3e-5
-  loss_list: ['pred:nll', 'attn:mse', 'hidn:mse', 'embd:mse']
+  loss_list: ['pred:nll', 'pred:mse', 'hidn:mse', 'embd:mse']
 
 # Weight-and-bias config
 wandb:
@@ -19,13 +19,13 @@ wandb:
 teacher_model: ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Custom student randomly initialized
-student_model:
-  hidden_size: 144
-  hidden_layers: 2
-  atten_heads: 12
+#student_model:
+#  hidden_size: 144
+#  hidden_layers: 2
+#  atten_heads: 12
 
 # Pre-trained student
-#student_model: google/bert_uncased_L-2_H-128_A-2
+student_model: google/bert_uncased_L-2_H-128_A-2
 
 
 
