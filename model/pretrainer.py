@@ -4,7 +4,7 @@ from pytorch_lightning.utilities.types import _PATH
 
 import os
 import torch
-import torchmetrics
+
 from pytorch_lightning import LightningModule
 from pytorch_lightning.plugins import CheckpointIO
 from pytorch_lightning.utilities.cloud_io import get_filesystem
@@ -78,10 +78,6 @@ class Pretrainer(LightningModule):
 
         self.model = BertForMaskedLM(config)
 
-        # Metrics
-        self.acc = torchmetrics.Accuracy(num_classes=self.hparams.num_classes)
-        self.f1 = torchmetrics.F1Score(num_classes=self.hparams.num_classes)
-
     def forward(self, batch):
         """
         :param
@@ -92,9 +88,7 @@ class Pretrainer(LightningModule):
         :return:
             out: SequenceClassfierOutput with keys [loss, logits]
         """
-        x, labels = batch['sentence'], batch['label']
-        out = self.model(**x, labels=labels)
-        return out
+        return self.model(**batch)
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
@@ -123,19 +117,11 @@ class Pretrainer(LightningModule):
         return loss
 
     def validation_step(self, batch, idx):
-        labels = batch['label']
-        out = self(batch)
-        pred = torch.argmax(out.logits, dim=1)
-        self.f1(pred, labels)
-        self.acc(pred, labels)
-
-        return {'val_loss': out.loss}
+        return {'val_loss': self(batch).loss}
 
     def validation_epoch_end(self, outputs) -> None:
         val_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         self.log("val_loss", val_loss, prog_bar=True, logger=True)
-        self.log('val_acc', self.acc, logger=True)
-        self.log('val_f1', self.f1, logger=True)
 
     def on_save_checkpoint(self, checkpoint) -> None:
         """

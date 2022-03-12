@@ -1,0 +1,16 @@
+
+# Data module configs
+data:
+  batch_size: 32
+  tokenizer: bert-base-cased
+  mlm_prob: 0.15
+
+# Weight-and-bias config
+wandb:
+  project: pretrain
+  exp: test
+
+# The model
+hidden_size: 144
+hidden_layers: 2
+atten_heads: 12
