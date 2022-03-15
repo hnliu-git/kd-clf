@@ -44,3 +44,6 @@ if __name__ == '__main__':
                       logger=wandb_logger)
 
     trainer.fit(pretrainer, dm)
+
+    # fill = pipeline('fill-mask', model='filiberto', tokenizer='filiberto')
+    # fill(f'ciao {fill.tokenizer.mask_token} va?')
