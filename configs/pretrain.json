@@ -7,8 +7,9 @@
   "warmup_ratio": 0.01,
   "max_seq_length": 512,
   "overwrite_output_dir": true,
-  "output_dir": "ckpts",
-  "dataset_name": "imdb",
+  "dataset_config_name": "20200501.en",
+  "output_dir": "pretrain",
+  "dataset_name": "wikipedia",
   "tokenizer_name": "bert-base-uncased",
   "config_overrides": "hidden_size=144,num_attention_heads=12,num_hidden_layers=2"
 }
