@@ -2,6 +2,7 @@
   "model_type": "bert",
   "do_train": true,
   "do_eval": true,
+  "preprocessing_num_workers": 8,
   "per_device_train_batch_size": 128,
   "mlm_probability": 0.2,
   "warmup_ratio": 0.01,
