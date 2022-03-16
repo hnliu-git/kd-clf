@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 from pytorch_lightning.utilities.types import _PATH
 
 import os
+import math
 import torch
 
 from pytorch_lightning import LightningModule
@@ -121,7 +122,11 @@ class Pretrainer(LightningModule):
 
     def validation_epoch_end(self, outputs) -> None:
         val_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        self.log("val_loss", val_loss, prog_bar=True, logger=True)
+        try:
+            perplexity = math.exp(val_loss)
+        except OverflowError:
+            perplexity = float("inf")
+        self.log("perplexity", perplexity, prog_bar=True, logger=True)
 
     def on_save_checkpoint(self, checkpoint) -> None:
         """

@@ -29,19 +29,45 @@ def get_args(yaml_path):
     return args
 
 
+def prepare_dataset(dataset_name, dataset_cfg, args):
+
+    raw_dataset = load_dataset(
+        dataset_name,
+        dataset_cfg
+    )
+
+    if "validation" not in raw_dataset.keys():
+        raw_dataset['validation'] = load_dataset(
+            dataset_name,
+            dataset_cfg,
+            split=f"train[:{args.val_split_per}%]"
+        )
+        raw_dataset['train'] = load_dataset(
+            dataset_name,
+            dataset_cfg,
+            split=f"train[{args.val_split_per}:]"
+        )
+
+    return raw_dataset
+
+
 if __name__ == '__main__':
 
     args = get_args('configs/pretrain.yaml')
 
     # Logger
-    wandb_logger = WandbLogger(project=args.project, name=args.exp)
+    # wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    dm = PtrDataModule(load_dataset('bookcorpus', split='train[:1%]')['text'], args)
+    dataset = prepare_dataset('glue', 'sst2', args)
+
+    dm = PtrDataModule(dataset, args)
 
     pretrainer = Pretrainer(args)
 
-    trainer = Trainer(gpus=1,
-                      logger=wandb_logger)
+    trainer = Trainer(
+        gpus=1,
+        # logger=wandb_logger
+    )
 
     trainer.fit(pretrainer, dm)
 

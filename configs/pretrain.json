@@ -8,9 +8,9 @@
   "warmup_ratio": 0.01,
   "max_seq_length": 512,
   "overwrite_output_dir": true,
-  "dataset_config_name": "20200501.en",
+  "dataset_config_name": "sst2",
   "output_dir": "pretrain",
-  "dataset_name": "wikipedia",
+  "dataset_name": "glue",
   "tokenizer_name": "bert-base-uncased",
   "config_overrides": "hidden_size=144,num_attention_heads=12,num_hidden_layers=2"
 }
