@@ -28,6 +28,7 @@ class PtrDataModule(LightningDataModule):
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
         parser.add_argument("--max_seq_length", type=int, default=512)
+        parser.add_argument("--cache_dir", type=str, default=None)
         parser.add_argument("--val_split_per", type=float, default=10,
                             help="Percentage of spliting if the dataset doesn't have validation key")
         parser.add_argument("--mlm_prob", type=float, default=0.15,
