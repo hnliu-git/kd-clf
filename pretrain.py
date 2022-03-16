@@ -56,9 +56,9 @@ if __name__ == '__main__':
     args = get_args('configs/pretrain.yaml')
 
     # Logger
-    # wandb_logger = WandbLogger(project=args.project, name=args.exp)
+    wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    dataset = prepare_dataset('glue', 'sst2', args)
+    dataset = prepare_dataset('bookcorpus', None, args)
 
     dm = PtrDataModule(dataset, args)
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     trainer = Trainer(
         gpus=1,
-        # logger=wandb_logger
+        logger=wandb_logger
     )
 
     trainer.fit(pretrainer, dm)

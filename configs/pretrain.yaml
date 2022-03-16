@@ -1,8 +1,8 @@
 
 # Data module configs
 data:
-  batch_size: 32
-  max_seq_length: 512
+  batch_size: 8
+  max_seq_length: 256
   tokenizer: bert-base-cased
   mlm_prob: 0.15
 

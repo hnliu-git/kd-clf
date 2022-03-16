@@ -108,8 +108,13 @@ class Pretrainer(LightningModule):
                                       lr=self.hparams.learning_rate,
                                       eps=self.hparams.eps,)
 
-        fn_lambda = lambda epoch: 0.85 ** epoch
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [fn_lambda, fn_lambda])
+        def fn_lambda(epoch):
+            if epoch < 1:
+                return 0.01
+            else:
+                return 0.85 ** (epoch - 1)
+
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=[fn_lambda, fn_lambda])
         return [optimizer], [scheduler]
 
     def training_step(self, batch, idx):
