@@ -2,9 +2,12 @@
 # Data module configs
 data:
   batch_size: 8
-  max_seq_length: 256
-  tokenizer: bert-base-cased
+  num_workers: 4
   mlm_prob: 0.15
+  max_seq_length: 256
+  cache_dir: 
+  tokenizer: bert-base-uncased
+
 
 # Weight-and-bias config
 wandb:

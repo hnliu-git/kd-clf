@@ -33,19 +33,22 @@ def prepare_dataset(dataset_name, dataset_cfg, args):
 
     raw_dataset = load_dataset(
         dataset_name,
-        dataset_cfg
+        dataset_cfg,
+        cache_dir=args.cache_dir
     )
 
     if "validation" not in raw_dataset.keys():
         raw_dataset['validation'] = load_dataset(
             dataset_name,
             dataset_cfg,
-            split=f"train[:{args.val_split_per}%]"
+            split=f"train[:{args.val_split_per}%]",
+            cache_dir=args.cache_dir
         )
         raw_dataset['train'] = load_dataset(
             dataset_name,
             dataset_cfg,
-            split=f"train[{args.val_split_per}:]"
+            split=f"train[{args.val_split_per}:]",
+            cache_dir=args.cache_dir
         )
 
     return raw_dataset
@@ -59,11 +62,9 @@ if __name__ == '__main__':
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
     dataset = prepare_dataset('bookcorpus', None, args)
-
     dm = PtrDataModule(dataset, args)
 
     pretrainer = Pretrainer(args)
-
     trainer = Trainer(
         gpus=1,
         logger=wandb_logger
