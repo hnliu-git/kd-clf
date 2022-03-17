@@ -61,7 +61,7 @@ if __name__ == '__main__':
     # Logger
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    dataset = prepare_dataset('wikipedia', '20200501.en', args)
+    dataset = prepare_dataset('glue', 'sst2', args)
     dm = PtrDataModule(dataset, args)
 
     pretrainer = Pretrainer(args)

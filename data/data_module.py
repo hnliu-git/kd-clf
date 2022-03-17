@@ -3,8 +3,7 @@ Data module for classification task, require a dataset object as input
 Author: Haonan Liu
 Last Modified: 09.02.2022
 '''
-
-
+import datasets
 import torch
 
 from typing import Optional
@@ -28,6 +27,8 @@ class PtrDataModule(LightningDataModule):
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
         parser.add_argument("--max_seq_length", type=int, default=512)
+        parser.add_argument("--load_data_from_disk", type=bool, default=False)
+        parser.add_argument("--data_dir", type=str, default=None)
         parser.add_argument("--cache_dir", type=str, default=None)
         parser.add_argument("--val_split_per", type=float, default=10,
                             help="Percentage of spliting if the dataset doesn't have validation key")
@@ -68,22 +69,30 @@ class PtrDataModule(LightningDataModule):
             }
             return result
 
-        max_seq_length = self.args.max_seq_length
-        column_names = self.raw_dataset['train'].column_names
-        text_column_name = "text" if "text" in column_names else column_names[0]
-        tokenized_datasets = self.raw_dataset.map(
-            tokenize_function,
-            batched=True,
-            num_proc=self.args.num_workers,
-            remove_columns=column_names,
-            desc="Running tokenizer on every text in dataset"
-        )
-        tokenized_datasets = tokenized_datasets.map(
-            group_texts,
-            batched=True,
-            num_proc=self.args.num_workers,
-            desc=f"Grouping texts in chunks of {max_seq_length}",
-        )
+        if self.args.load_data_from_disk and self.args.data_dir:
+            print("Loading data from disk...")
+            tokenized_datasets = datasets.load_from_disk(self.args.data_dir)
+        else:
+            max_seq_length = self.args.max_seq_length
+            column_names = self.raw_dataset['train'].column_names
+            text_column_name = "text" if "text" in column_names else column_names[0]
+            tokenized_datasets = self.raw_dataset.map(
+                tokenize_function,
+                batched=True,
+                batch_size=4000,
+                num_proc=self.args.num_workers,
+                remove_columns=column_names,
+                desc="Running tokenizer on every text in dataset"
+            )
+            tokenized_datasets = tokenized_datasets.map(
+                group_texts,
+                batched=True,
+                batch_size=4000,
+                num_proc=self.args.num_workers,
+                desc=f"Grouping texts in chunks of {max_seq_length}",
+            )
+            if self.args.data_dir:
+                tokenized_datasets.save_to_disk(self.args.data_dir)
 
         self.train = tokenized_datasets['train']
         self.val = tokenized_datasets['validation']

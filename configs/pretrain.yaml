@@ -1,11 +1,13 @@
 
 # Data module configs
 data:
-  batch_size: 8
+  batch_size: 64
   num_workers: 4
   mlm_prob: 0.15
   max_seq_length: 256
-  cache_dir: /content/drive/MyDrive/thesis/cache
+  data_dir: cache
+  cache_dir: cache
+#  load_data_from_disk: 0
   tokenizer: bert-base-uncased
 
 
