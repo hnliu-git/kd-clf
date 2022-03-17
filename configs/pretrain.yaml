@@ -5,8 +5,8 @@ data:
   num_workers: 4
   mlm_prob: 0.15
   max_seq_length: 256
-  data_dir: cache
-  cache_dir: cache
+  data_dir: /content/drive/MyDrive/thesis/cache
+  cache_dir: /content/drive/MyDrive/thesis/cache
 #  load_data_from_disk: 0
   tokenizer: bert-base-uncased
 
