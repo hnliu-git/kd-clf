@@ -66,9 +66,11 @@ def get_teacher_and_student(args):
     teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model)
 
     teacher.config.output_attentions = True
-    student.config.output_attentions = True
     teacher.config.output_hidden_states = True
+    teacher.config.num_labels = args.num_classes
     student.config.output_hidden_states = True
+    student.config.output_attentions = True
+    student.config.num_labels = args.num_classes
 
     return teacher, student
 
@@ -76,13 +78,18 @@ def get_teacher_and_student(args):
 if __name__ == '__main__':
 
     pl.seed_everything(2022)
-    args = get_args('configs/bert_base_kd.yaml')
+    args = get_args('configs/distillation.yaml')
 
     # Logger
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
     # Data Module
-    dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
+    if args.dataset_name == 'sst2':
+        args.num_classes = 2
+        dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
+    elif args.dataset_name == 'tweet':
+        args.num_classes = 3
+        dm = ClfDataModule(load_dataset('tweet_eval', 'emotion'), args)
 
     # Setup student and teacher
     teacher, student = get_teacher_and_student(args)
@@ -93,11 +100,13 @@ if __name__ == '__main__':
     hidn_adaptor = HidnRelnAdaptor()
 
     # Setup lightning
-    distiller = BaseDistiller(teacher,
-                              student,
-                              args,
-                              attn_adaptor,
-                              hidn_adaptor)
+    distiller = BaseDistiller(
+        teacher,
+        student,
+        args,
+        attn_adaptor,
+        hidn_adaptor
+    )
 
     early_stopping = EarlyStopping(
         mode='min',
@@ -106,9 +115,11 @@ if __name__ == '__main__':
         monitor='val_nll_loss'
     )
 
-    trainer = Trainer(gpus=1,
-                      logger=wandb_logger,
-                      callbacks=[early_stopping])
+    trainer = Trainer(
+        # gpus=1,
+        logger=wandb_logger,
+        callbacks=[early_stopping]
+    )
 
     trainer.fit(distiller, dm)
 

@@ -5,9 +5,9 @@ data:
   num_workers: 4
   mlm_prob: 0.15
   max_seq_length: 256
-  data_dir: /content/drive/MyDrive/thesis/cache
+  data_dir: /content/drive/MyDrive/thesis/cache/wikipedia_processed
   cache_dir: /content/drive/MyDrive/thesis/cache
-#  load_data_from_disk: 0
+  load_data_from_disk: 1
   tokenizer: bert-base-uncased
 
 

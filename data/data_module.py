@@ -69,17 +69,15 @@ class PtrDataModule(LightningDataModule):
             }
             return result
 
-        if self.args.load_data_from_disk and self.args.data_dir:
-            print("Loading data from disk...")
-            tokenized_datasets = datasets.load_from_disk(self.args.data_dir)
-        else:
+        if not self.args.load_data_from_disk:
             max_seq_length = self.args.max_seq_length
             column_names = self.raw_dataset['train'].column_names
             text_column_name = "text" if "text" in column_names else column_names[0]
             tokenized_datasets = self.raw_dataset.map(
                 tokenize_function,
                 batched=True,
-                batch_size=4000,
+                batch_size=40000,
+                keep_in_memory=True,
                 num_proc=self.args.num_workers,
                 remove_columns=column_names,
                 desc="Running tokenizer on every text in dataset"
@@ -87,12 +85,15 @@ class PtrDataModule(LightningDataModule):
             tokenized_datasets = tokenized_datasets.map(
                 group_texts,
                 batched=True,
-                batch_size=4000,
+                keep_in_memory=True,
+                batch_size=40000,
                 num_proc=self.args.num_workers,
                 desc=f"Grouping texts in chunks of {max_seq_length}",
             )
             if self.args.data_dir:
                 tokenized_datasets.save_to_disk(self.args.data_dir)
+        else:
+            tokenized_datasets = self.raw_dataset
 
         self.train = tokenized_datasets['train']
         self.val = tokenized_datasets['validation']
@@ -131,15 +132,17 @@ class ClfDataModule(LightningDataModule):
                             help="Number of workers for data loading.")
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
+        parser.add_argument("--dataset_name", type=str, required=True,
+                            help="clf dataset name")
         return parser
 
     @staticmethod
-    def default_collate_fn(batch, tkr):
+    def default_collate_fn(batch, tkr, text_column):
         labels = []
         sents = []
         for item in batch:
             labels.append(item['label'])
-            sents.append(item['sentence'])
+            sents.append(item[text_column])
 
         return {
             'sentence': tkr(sents, padding=True, return_tensors='pt'),
@@ -157,6 +160,7 @@ class ClfDataModule(LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(hparams.tokenizer)
 
     def setup(self, stage: Optional[str] = None) -> None:
+        self.text_column = self.dataset.column_names['train'][0]
         self.train = self.dataset['train']
         self.val = self.dataset['validation']
         self.test = self.dataset['test']
@@ -168,7 +172,7 @@ class ClfDataModule(LightningDataModule):
             shuffle=True,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer),
+            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer, text_column=self.text_column),
         )
         return self.train_loader
 
@@ -179,7 +183,7 @@ class ClfDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer),
+            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer, text_column=self.text_column),
         )
         return self.valid_loader
 
@@ -190,6 +194,6 @@ class ClfDataModule(LightningDataModule):
             shuffle=True,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer),
+            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer, text_column=self.text_column),
         )
         return self.test_loader

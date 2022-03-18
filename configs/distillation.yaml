@@ -2,18 +2,19 @@
 # Data module configs
 data:
   batch_size: 32
+  dataset_name: 'tweet' # options ['sst2', 'tweet']
   tokenizer: google/bert_uncased_L-2_H-128_A-2
 
 # Distillation configs
 
 distillation:
   learning_rate: 3e-5
-  loss_list: ['pred:nll', 'hidn:mse', 'embd:mse']
+  loss_list: ['pred:nll', 'pred:mse']
 
 # Weight-and-bias config
 wandb:
-  project: knowledge-distillation
-  exp: base2tiny-trm-test
+  project: knowledge-distillation-tweet
+  exp: base2tiny
 
 # Setting pre-trained teacher
 teacher_model: ckpts/bert-base-uncased-epoch=02-val_loss=0.22
