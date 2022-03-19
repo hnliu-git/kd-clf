@@ -61,7 +61,7 @@ if __name__ == '__main__':
     # Logger
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    if args.load_from_disk:
+    if args.load_data_from_disk:
         dataset = load_from_disk(args.data_dir)
     else:
         dataset = prepare_dataset('wikipedia', '20200501.en', args)
