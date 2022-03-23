@@ -60,7 +60,7 @@ class ClfFinetune(LightningModule):
     def __init__(self, args):
         super().__init__()
         self.save_hyperparameters(args)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.hparams.model)
+        self.model = AutoModelForSequenceClassification.from_pretrained(self.hparams.model, num_labels=args.num_classes)
 
         # Metrics
         self.acc = torchmetrics.Accuracy(num_classes=self.hparams.num_classes)

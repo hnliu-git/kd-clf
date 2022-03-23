@@ -54,23 +54,22 @@ def get_args(yaml_path):
 
 def get_teacher_and_student(args):
     if args.student_model:
-        student = AutoModelForSequenceClassification.from_pretrained(args.student_model)
+        student = AutoModelForSequenceClassification.from_pretrained(args.student_model, num_labels=args.num_classes)
     else:
         config = BertConfig(
             hidden_size=args.hidden_size,
             num_hidden_layers=args.hidden_layers,
-            num_attention_heads=args.atten_heads
+            num_attention_heads=args.atten_heads,
+            num_labels=args.num_classes
         )
         student = BertForSequenceClassification(config)
 
-    teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model)
+    teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model, num_labels=args.num_classes)
 
     teacher.config.output_attentions = True
     teacher.config.output_hidden_states = True
-    teacher.config.num_labels = args.num_classes
     student.config.output_hidden_states = True
     student.config.output_attentions = True
-    student.config.num_labels = args.num_classes
 
     return teacher, student
 
@@ -89,7 +88,7 @@ if __name__ == '__main__':
         dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
     elif args.dataset_name == 'tweet':
         args.num_classes = 3
-        dm = ClfDataModule(load_dataset('tweet_eval', 'emotion'), args)
+        dm = ClfDataModule(load_dataset('tweet_eval', 'sentiment'), args)
 
     # Setup student and teacher
     teacher, student = get_teacher_and_student(args)

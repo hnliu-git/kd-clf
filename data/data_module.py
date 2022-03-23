@@ -113,7 +113,7 @@ class PtrDataModule(LightningDataModule):
         self.val_loader = DataLoader(
             self.val,
             batch_size=self.hparams.batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
             collate_fn=self.collator
@@ -143,7 +143,6 @@ class ClfDataModule(LightningDataModule):
         for item in batch:
             labels.append(item['label'])
             sents.append(item[text_column])
-
         return {
             'sentence': tkr(sents, padding=True, return_tensors='pt'),
             'label': torch.LongTensor(labels)

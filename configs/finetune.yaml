@@ -2,7 +2,8 @@
 # Data module configs
 data:
   batch_size: 32
-  tokenizer: bert-base-cased
+  tokenizer: bert-base-uncased
+  dataset_name: 'tweet' # options ['sst2', 'tweet']
 
 # Distillation configs
 training:
@@ -11,10 +12,10 @@ training:
 # Weight-and-bias config
 wandb:
   project: finetune
-  exp: bert-base-cased
+  exp: bert-base-uncased-tweet
 
 # Setting pre-trained model
-model: bert-base-cased
+model: bert-base-uncased
 ckpt_path: ckpts/
 
 

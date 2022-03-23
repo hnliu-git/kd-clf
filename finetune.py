@@ -35,7 +35,13 @@ if __name__ == '__main__':
     args = get_args('configs/finetune.yaml')
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
+    if args.dataset_name == 'sst2':
+        args.num_classes = 2
+        dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
+    elif args.dataset_name == 'tweet':
+        args.num_classes = 3
+        dm = ClfDataModule(load_dataset('tweet_eval', 'sentiment'), args)
+
     model = ClfFinetune(args)
 
     ckpt_callback = ModelCheckpoint(

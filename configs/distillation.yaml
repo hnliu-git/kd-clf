@@ -18,6 +18,7 @@ wandb:
 
 # Setting pre-trained teacher
 teacher_model: ckpts/bert-base-uncased-epoch=02-val_loss=0.22
+#teacher_model: 'distilbert-base-uncased'
 
 # Custom student randomly initialized
 #student_model:
