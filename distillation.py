@@ -43,6 +43,10 @@ def get_args(yaml_path):
     parser.add_argument("--atten_heads", default=12, type=int,
                         help="Number of attention heads of the student")
 
+    # Data configs
+    parser.add_argument("--trn_dataset", default=None, type=str, required=True)
+    parser.add_argument("--val_dataset", default=None, type=str, required=True)
+
     parser = ClfDataModule.add_model_specific_args(parser)
     parser = BaseDistiller.add_model_specific_args(parser)
 
@@ -50,6 +54,32 @@ def get_args(yaml_path):
     args = parser.parse_args(serialize_config(config))
 
     return args
+
+
+def get_dataset_obj(args):
+    sst2 = load_dataset('glue', 'sst2').rename_column('sentence', 'text')
+    tweet = load_dataset('tweet_eval', 'sentiment')
+
+    if args.trn_dataset == 'sst2':
+        train = sst2['train']
+    elif args.trn_dataset == 'tweet':
+        train = tweet['train']
+    elif args.trn_dataset == 'sst2-tweet':
+        from datasets import concatenate_datasets
+        train = concatenate_datasets([
+            sst2.remove_columns(['idx', 'label'])['train'],
+            tweet.remove_columns(['label'])['train']
+        ])
+
+    if args.val_dataset == 'sst2':
+        args.num_classes = 2
+        sst2['train'] = train
+        dataset = sst2
+    elif args.val_dataset == 'tweet':
+        tweet['train'] = train
+        dataset = tweet
+
+    return dataset
 
 
 def get_teacher_and_student(args):
@@ -83,12 +113,7 @@ if __name__ == '__main__':
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
     # Data Module
-    if args.dataset_name == 'sst2':
-        args.num_classes = 2
-        dm = ClfDataModule(load_dataset('glue', 'sst2'), args)
-    elif args.dataset_name == 'tweet':
-        args.num_classes = 3
-        dm = ClfDataModule(load_dataset('tweet_eval', 'sentiment'), args)
+    dm = ClfDataModule(get_dataset_obj(args), args)
 
     # Setup student and teacher
     teacher, student = get_teacher_and_student(args)

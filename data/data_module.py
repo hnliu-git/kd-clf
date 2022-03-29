@@ -132,12 +132,11 @@ class ClfDataModule(LightningDataModule):
                             help="Number of workers for data loading.")
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
-        parser.add_argument("--dataset_name", type=str, required=True,
-                            help="clf dataset name")
+        parser.add_argument("--train_with_label", type=bool, default=True)
         return parser
 
     @staticmethod
-    def default_collate_fn(batch, tkr, text_column):
+    def collate_fn_def(batch, tkr, text_column):
         labels = []
         sents = []
         for item in batch:
@@ -146,6 +145,15 @@ class ClfDataModule(LightningDataModule):
         return {
             'sentence': tkr(sents, padding=True, return_tensors='pt'),
             'label': torch.LongTensor(labels)
+        }
+
+    @staticmethod
+    def collate_fn_wol(batch, tkr, text_column):
+        sents = []
+        for item in batch:
+            sents.append(item[text_column])
+        return {
+            'sentence': tkr(sents, padding=True, return_tensors='pt'),
         }
 
     def __init__(self, dataset, hparams):
@@ -165,13 +173,18 @@ class ClfDataModule(LightningDataModule):
         self.test = self.dataset['test']
 
     def train_dataloader(self):
+        if self.hparams.train_with_label:
+            collate_fn = self.collate_fn_def
+        else:
+            collate_fn = self.collate_fn_wol
+
         self.train_loader = DataLoader(
             self.train,
             batch_size=self.hparams.batch_size,
             shuffle=True,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer, text_column=self.text_column),
+            collate_fn=partial(collate_fn, tkr=self.tokenizer, text_column=self.text_column),
         )
         return self.train_loader
 
@@ -182,7 +195,7 @@ class ClfDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer, text_column=self.text_column),
+            collate_fn=partial(self.collate_fn_def, tkr=self.tokenizer, text_column=self.text_column),
         )
         return self.valid_loader
 
@@ -193,6 +206,6 @@ class ClfDataModule(LightningDataModule):
             shuffle=True,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.default_collate_fn, tkr=self.tokenizer, text_column=self.text_column),
+            collate_fn=partial(self.collate_fn_def, tkr=self.tokenizer, text_column=self.text_column),
         )
         return self.test_loader

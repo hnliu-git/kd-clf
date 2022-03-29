@@ -2,8 +2,10 @@
 # Data module configs
 data:
   batch_size: 32
-  dataset_name: 'tweet' # options ['sst2', 'tweet']
+  val_dataset: 'sst2' # options ['sst2', 'tweet']
+  trn_dataset: 'sst2-tweet' # options ['sst2', 'tweet', 'sst2-tweet']
   tokenizer: google/bert_uncased_L-2_H-128_A-2
+  train_with_label: 0
 
 # Distillation configs
 
