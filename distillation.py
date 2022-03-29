@@ -115,7 +115,7 @@ if __name__ == '__main__':
     )
 
     trainer = Trainer(
-        # gpus=1,
+        gpus=1,
         logger=wandb_logger,
         callbacks=[early_stopping]
     )
