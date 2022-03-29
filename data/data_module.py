@@ -132,7 +132,8 @@ class ClfDataModule(LightningDataModule):
                             help="Number of workers for data loading.")
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
-        parser.add_argument("--train_with_label", type=bool, default=True)
+        parser.add_argument("--train_with_label", type=bool, default=False)
+
         return parser
 
     @staticmethod

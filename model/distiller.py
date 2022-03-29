@@ -51,7 +51,8 @@ class BaseDistiller(LightningModule):
             name, func = loss_name.split(':')
             if name == 'pred':
                 if func == 'nll':
-                    loss_dict['pred:nll'] = out_s.loss
+                    if out_s.loss:
+                        loss_dict['pred:nll'] = out_s.loss
                     continue
                 score_t = out_t.logits
                 score_s = out_s.logits
@@ -91,11 +92,17 @@ class BaseDistiller(LightningModule):
             teacher_out: SequenceClassfierOutput with keys [logits]
             student_out: SequenceClassfierOutput with keys [loss, logits]
         """
-        # TO-DO not always have label
         self.teacher.eval()
-        x, labels = batch['sentence'], batch['label']
-        teacher_out = self.teacher(**x, labels=labels)
-        student_out = self.student(**x, labels=labels)
+
+        if 'label' in batch:
+            x, labels = batch['sentence'], batch['label']
+            teacher_out = self.teacher(**x, labels=labels)
+            student_out = self.student(**x, labels=labels)
+        else:
+            x = batch['sentence']
+            teacher_out = self.teacher(**x)
+            student_out = self.student(**x)
+
         return teacher_out, student_out
 
     def configure_optimizers(self):
@@ -128,7 +135,8 @@ class BaseDistiller(LightningModule):
         for k, v in loss_dict.items():
             self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
-        self.log('nll_loss_teacher', nll_t, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        if nll_t:
+            self.log('nll_loss_teacher', nll_t, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
         return sum(loss_dict.values())
 

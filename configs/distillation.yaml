@@ -5,7 +5,7 @@ data:
   val_dataset: 'sst2' # options ['sst2', 'tweet']
   trn_dataset: 'sst2-tweet' # options ['sst2', 'tweet', 'sst2-tweet']
   tokenizer: google/bert_uncased_L-2_H-128_A-2
-  train_with_label: 0
+#  train_with_label: 1
 
 # Distillation configs
 
@@ -19,7 +19,7 @@ wandb:
   exp: bert2tiny
 
 # Setting pre-trained teacher
-teacher_model: ckpts/bert-base-uncased-epoch=01-val_loss=0.61
+teacher_model: ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 #teacher_model: 'bert-base-uncased'
 
 # Custom student randomly initialized
