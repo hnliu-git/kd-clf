@@ -3,7 +3,7 @@
 data:
   batch_size: 32
   val_dataset: 'sst2' # options ['sst2', 'tweet']
-  trn_dataset: 'sst2-tweet' # options ['sst2', 'tweet', 'sst2-tweet']
+  trn_dataset: 'sst2' # options ['sst2', 'tweet', 'sst2-tweet']
   tokenizer: google/bert_uncased_L-2_H-128_A-2
 #  train_with_label: 1
 
@@ -15,21 +15,22 @@ distillation:
 
 # Weight-and-bias config
 wandb:
-  project: knowledge-distillation-tweet
-  exp: bert2tiny
+  project: knowledge-distillation-sst2
+  exp: test
 
 # Setting pre-trained teacher
-teacher_model: ckpts/bert-base-uncased-epoch=02-val_loss=0.22
-#teacher_model: 'bert-base-uncased'
+teacher_model: bert-base-uncased
+teacher_model_pt:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Custom student randomly initialized
-#student_model:
-#  hidden_size: 144
-#  hidden_layers: 2
-#  atten_heads: 12
+student_model:
+  hidden_size: 144
+  hidden_layers: 2
+  atten_heads: 12
 
 # Pre-trained student
-student_model: google/bert_uncased_L-2_H-128_A-2
+#student_model: google/bert_uncased_L-2_H-128_A-2
 
-
+# Ckpt
+#ckpt_path: ckpts/
 

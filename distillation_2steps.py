@@ -32,6 +32,8 @@ def get_args(yaml_path):
     # Teacher Model
     parser.add_argument("--teacher_model", default='bert-base-uncased', type=str,
                         help="name of the teacher model")
+    parser.add_argument("--teacher_model_pt", required=True, type=str,
+                        help="name of the teacher model")
 
     # Student Model
     parser.add_argument("--student_model", default=None, type=str,
@@ -133,22 +135,40 @@ if __name__ == '__main__':
         hidn_adaptor
     )
 
-    if args.student_model:
-        student_name = args.student_model.split('/'[-1])
-    else:
-        student_name = 'bert_uncased_rand_L-%d_H-%d_A_%d'%(
-            args.hidden_layers,
-            args.hidden_size,
-            args.attn_heads
-        )
-
-    ckpt_callback = ModelCheckpoint(
-        dirpath=args.ckpt_path,
-        monitor='val_loss',
-        save_top_k=2,
-        filename="%s-%s-{epoch:02d}-{val_loss:.2f}"
-                 % (args.val_dataset, student_name),
+    trainer = Trainer(
+        gpus=1,
+        max_epochs=1
     )
+
+    trainer.fit(distiller, dm)
+
+    teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model_pt, num_labels=args.num_classes)
+    student = distiller.student
+
+    distiller = BaseDistiller(
+        teacher,
+        student,
+        args,
+        attn_adaptor,
+        hidn_adaptor
+    )
+
+    # if args.student_model:
+    #     student_name = args.student_model.split('/'[-1])
+    # else:
+    #     student_name = 'bert_uncased_L-%d_H-%d_A_%d'%(
+    #         args.hidden_layers,
+    #         args.hidden_size,
+    #         args.attn_heads
+    #     )
+
+    # ckpt_callback = ModelCheckpoint(
+    #     dirpath=args.ckpt_path,
+    #     monitor='val_loss',
+    #     save_top_k=2,
+    #     filename="%s-%s-{epoch:02d}-{val_loss:.2f}"
+    #              % (args.val_dataset, student_name),
+    # )
 
     early_stopping = EarlyStopping(
         mode='min',
@@ -159,9 +179,8 @@ if __name__ == '__main__':
 
     trainer = Trainer(
         gpus=1,
-        plugins=[HgCkptIO()],
         logger=wandb_logger,
-        callbacks=[ckpt_callback, early_stopping]
+        callbacks=[early_stopping]
     )
 
     trainer.fit(distiller, dm)

@@ -1,10 +1,43 @@
 
 from argparse import ArgumentParser
+from typing import Any, Dict, Optional
 from pytorch_lightning import LightningModule
+from pytorch_lightning.plugins import CheckpointIO
+from pytorch_lightning.utilities.types import _PATH
+from pytorch_lightning.utilities.cloud_io import get_filesystem
 
+import os
 import torch
 import torchmetrics
 import torch.nn.functional as F
+
+
+class HgCkptIO(CheckpointIO):
+
+    def save_checkpoint(self, checkpoint: Dict[str, Any], path: _PATH, storage_options: Optional[Any] = None) -> None:
+        '''Save the fine-tuned model in a hugging-face style.
+
+        Args:
+            checkpoint: ckpt, but only key 'hg_model' matters
+            path: path to save the ckpt
+            storage_options: not used
+        '''
+        fs = get_filesystem(path)
+        fs.makedirs(os.path.dirname(path), exist_ok=True)
+        checkpoint['student'].save_pretrained(path.replace('.ckpt', ''))
+
+    def load_checkpoint(self, path: _PATH, storage_options: Optional[Any] = None) -> Dict[str, Any]:
+        pass
+
+    def remove_checkpoint(self, path: _PATH) -> None:
+        """Remove checkpoint file from the filesystem.
+
+        Args:
+            path: Path to checkpoint
+        """
+        fs = get_filesystem(path)
+        if fs.exists(path):
+            fs.rm(path, recursive=True)
 
 
 class BaseDistiller(LightningModule):
@@ -157,3 +190,8 @@ class BaseDistiller(LightningModule):
         self.log('val_acc_t', self.acc_t)
         self.log('val_acc_s', self.acc_s)
 
+    def on_save_checkpoint(self, checkpoint) -> None:
+        """
+            For the customed CheckpointIO
+        """
+        checkpoint['student'] = self.student
