@@ -143,6 +143,9 @@ if __name__ == '__main__':
     trainer.fit(distiller, dm)
 
     teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model_pt, num_labels=args.num_classes)
+    teacher.config.output_attentions = True
+    teacher.config.output_hidden_states = True
+
     student = distiller.student
 
     distiller = BaseDistiller(
