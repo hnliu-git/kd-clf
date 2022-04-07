@@ -52,6 +52,7 @@ def get_args(yaml_path):
 
     config = yaml.load(open(yaml_path), Loader=yaml.FullLoader)
     args = parser.parse_args(serialize_config(config))
+    args.loss_list = args.loss_list_ft
 
     return args
 

@@ -111,14 +111,13 @@ if __name__ == '__main__':
 
     pl.seed_everything(2022)
     args = get_args('configs/distillation.yaml')
+    args.loss_list = args.loss_list_ptr
 
     # Logger
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    # Data Module
+    # Distillation Step 1
     dm = ClfDataModule(get_dataset_obj(args), args)
-
-    # Setup student and teacher
     teacher, student = get_teacher_and_student(args)
 
     # Setup adaptor
@@ -137,15 +136,20 @@ if __name__ == '__main__':
 
     trainer = Trainer(
         gpus=1,
-        max_epochs=1
+        max_epochs=5,
+        # max_steps=100
     )
 
     trainer.fit(distiller, dm)
 
+    # Distillation Step 2
+    args.loss_list = args.loss_list_ft
+    args.train_with_label = True
+
+    dm = ClfDataModule(get_dataset_obj(args), args)
     teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model_pt, num_labels=args.num_classes)
     teacher.config.output_attentions = True
     teacher.config.output_hidden_states = True
-
     student = distiller.student
 
     distiller = BaseDistiller(
@@ -155,23 +159,6 @@ if __name__ == '__main__':
         attn_adaptor,
         hidn_adaptor
     )
-
-    # if args.student_model:
-    #     student_name = args.student_model.split('/'[-1])
-    # else:
-    #     student_name = 'bert_uncased_L-%d_H-%d_A_%d'%(
-    #         args.hidden_layers,
-    #         args.hidden_size,
-    #         args.attn_heads
-    #     )
-
-    # ckpt_callback = ModelCheckpoint(
-    #     dirpath=args.ckpt_path,
-    #     monitor='val_loss',
-    #     save_top_k=2,
-    #     filename="%s-%s-{epoch:02d}-{val_loss:.2f}"
-    #              % (args.val_dataset, student_name),
-    # )
 
     early_stopping = EarlyStopping(
         mode='min',

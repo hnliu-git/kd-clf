@@ -54,8 +54,8 @@ class BaseDistiller(LightningModule):
         parser.add_argument("--num_classes", default=2, type=int)
 
         # Distillation Configurations
-        parser.add_argument("--loss_list", default=['pred:mse'], type=list)
-
+        parser.add_argument("--loss_list_ptr", default=None, type=list)
+        parser.add_argument("--loss_list_ft", default=None, type=list)
         return parser
 
     def __init__(self, teacher, student, args, attn_adaptor=None, hidn_adaptor=None):
