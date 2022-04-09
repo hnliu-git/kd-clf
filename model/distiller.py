@@ -4,12 +4,14 @@ from typing import Any, Dict, Optional
 from pytorch_lightning import LightningModule
 from pytorch_lightning.plugins import CheckpointIO
 from pytorch_lightning.utilities.types import _PATH
+from transformers import get_linear_schedule_with_warmup
 from pytorch_lightning.utilities.cloud_io import get_filesystem
 
 import os
 import torch
 import torchmetrics
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import LambdaLR
 
 
 class HgCkptIO(CheckpointIO):
@@ -49,6 +51,7 @@ class BaseDistiller(LightningModule):
 
         # Training Configurations
         parser.add_argument("--weight_decay", default=5e-5, type=float)
+        parser.add_argument("--epochs", default=5, type=int)
         parser.add_argument("--learning_rate", default=1e-4, type=float)
         parser.add_argument("--eps", default=1e-8, type=float)
         parser.add_argument("--num_classes", default=2, type=int)
@@ -158,9 +161,13 @@ class BaseDistiller(LightningModule):
                                       lr=self.hparams.learning_rate,
                                       eps=self.hparams.eps, )
 
-        fn_lambda = lambda epoch: 0.85 ** epoch
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, [fn_lambda, fn_lambda])
-        return [optimizer], [scheduler]
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer,
+            num_training_steps=self.hparams.num_training_steps,
+            num_warmup_steps=0.1*self.hparams.num_training_steps
+        )
+
+        return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
     def training_step(self, batch, idx):
         loss_dict, nll_t = self.compute_loss(*self(batch))
@@ -170,6 +177,8 @@ class BaseDistiller(LightningModule):
 
         if nll_t:
             self.log('nll_loss_teacher', nll_t, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        # self.trainer.lr_schedulers[0]['scheduler'].step()
+        # self.log('lr', self.trainer.lr_schedulers[0]['scheduler'].get_lr()[0])
 
         return sum(loss_dict.values())
 

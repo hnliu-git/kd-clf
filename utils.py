@@ -1,4 +1,25 @@
+import yaml
+
 from typing import List, Dict
+from transformers import (
+    AutoModelForSequenceClassification,
+    BertConfig,
+    BertForSequenceClassification
+)
+
+
+def path_to_clf_model(path: str, num_classes: int):
+    if 'yaml' in path:
+        args = yaml.load(open(path), Loader=yaml.FullLoader)
+        config = BertConfig(**args, num_labels=num_classes)
+        model = BertForSequenceClassification(config)
+    else:
+        model = AutoModelForSequenceClassification.from_pretrained(path, num_labels=num_classes)
+
+    model.config.output_attentions = True
+    model.config.output_hidden_states = True
+
+    return model
 
 
 def serialize_config(config: Dict) -> List[str]:

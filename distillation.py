@@ -6,18 +6,12 @@ from model.adpator import *
 from data.data_module import ClfDataModule
 from model.distiller import BaseDistiller, HgCkptIO
 
-from utils import serialize_config
+from utils import serialize_config, path_to_clf_model
 from datasets import load_dataset
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
-
-from transformers import (
-    BertConfig,
-    BertForSequenceClassification,
-    AutoModelForSequenceClassification
-)
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 
 
 def get_args(yaml_path):
@@ -36,14 +30,9 @@ def get_args(yaml_path):
     # Student Model
     parser.add_argument("--student_model", default=None, type=str,
                         help="pretrained student model, the default is the bert_tiny model")
-    parser.add_argument("--hidden_size", default=768, type=int,
-                        help="Dim of the encoder layer and pooler layer of the student")
-    parser.add_argument("--hidden_layers", default=12, type=int,
-                        help="Number of hidden layers in encoder of the student")
-    parser.add_argument("--atten_heads", default=12, type=int,
-                        help="Number of attention heads of the student")
 
     # Data configs
+    parser.add_argument("--trr_dataset", default=None, type=str)
     parser.add_argument("--trn_dataset", default=None, type=str, required=True)
     parser.add_argument("--val_dataset", default=None, type=str, required=True)
 
@@ -81,29 +70,9 @@ def get_dataset_obj(args):
         tweet['train'] = train
         dataset = tweet
 
+    args.num_training_steps = int(len(train)/args.batch_size) * min(args.epochs, 10)
+
     return dataset
-
-
-def get_teacher_and_student(args):
-    if args.student_model:
-        student = AutoModelForSequenceClassification.from_pretrained(args.student_model, num_labels=args.num_classes)
-    else:
-        config = BertConfig(
-            hidden_size=args.hidden_size,
-            num_hidden_layers=args.hidden_layers,
-            num_attention_heads=args.atten_heads,
-            num_labels=args.num_classes
-        )
-        student = BertForSequenceClassification(config)
-
-    teacher = AutoModelForSequenceClassification.from_pretrained(args.teacher_model, num_labels=args.num_classes)
-
-    teacher.config.output_attentions = True
-    teacher.config.output_hidden_states = True
-    student.config.output_hidden_states = True
-    student.config.output_attentions = True
-
-    return teacher, student
 
 
 if __name__ == '__main__':
@@ -118,7 +87,8 @@ if __name__ == '__main__':
     dm = ClfDataModule(get_dataset_obj(args), args)
 
     # Setup student and teacher
-    teacher, student = get_teacher_and_student(args)
+    teacher = path_to_clf_model(args.teacher_model, args.num_classes)
+    student = path_to_clf_model(args.student_model, args.num_classes)
 
     # Setup adaptor
     attn_adaptor = AttnMiniLMAdaptor()
@@ -134,37 +104,34 @@ if __name__ == '__main__':
         hidn_adaptor
     )
 
-    if args.student_model:
-        student_name = args.student_model.split('/'[-1])
-    else:
-        student_name = 'bert_uncased_rand_L-%d_H-%d_A_%d'%(
-            args.hidden_layers,
-            args.hidden_size,
-            args.attn_heads
-        )
-
-    ckpt_callback = ModelCheckpoint(
-        dirpath=args.ckpt_path,
-        monitor='val_loss',
-        save_top_k=2,
-        filename="%s-%s-{epoch:02d}-{val_loss:.2f}"
-                 % (args.val_dataset, student_name),
-    )
-
-    early_stopping = EarlyStopping(
-        mode='min',
-        patience=6,
-        min_delta=0.01,
-        monitor='val_nll_loss'
-    )
-
     trainer = Trainer(
         gpus=1,
-        plugins=[HgCkptIO()],
         logger=wandb_logger,
-        callbacks=[ckpt_callback, early_stopping]
+        callbacks=[LearningRateMonitor(logging_interval='step')]
     )
 
     trainer.fit(distiller, dm)
 
+    # early_stopping = EarlyStopping(
+    #     mode='min',
+    #     patience=6,
+    #     min_delta=0.01,
+    #     monitor='val_nll_loss'
+    # )
 
+    # if args.student_model:
+    #     student_name = args.student_model.split('/'[-1])
+    # else:
+    #     student_name = 'bert_uncased_rand_L-%d_H-%d_A_%d'%(
+    #         args.hidden_layers,
+    #         args.hidden_size,
+    #         args.attn_heads
+    #     )
+    #
+    # ckpt_callback = ModelCheckpoint(
+    #     dirpath=args.ckpt_path,
+    #     monitor='val_loss',
+    #     save_top_k=2,
+    #     filename="%s-%s-{epoch:02d}-{val_loss:.2f}"
+    #              % (args.val_dataset, student_name),
+    # )
