@@ -11,7 +11,6 @@ import os
 import torch
 import torchmetrics
 import torch.nn.functional as F
-from torch.optim.lr_scheduler import LambdaLR
 
 
 class HgCkptIO(CheckpointIO):
@@ -164,7 +163,7 @@ class BaseDistiller(LightningModule):
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
             num_training_steps=self.hparams.num_training_steps,
-            num_warmup_steps=0.1*self.hparams.num_training_steps
+            num_warmup_steps=self.hparams.num_warmup_steps
         )
 
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
@@ -177,8 +176,6 @@ class BaseDistiller(LightningModule):
 
         if nll_t:
             self.log('nll_loss_teacher', nll_t, on_step=True, on_epoch=False, prog_bar=True, logger=True)
-        # self.trainer.lr_schedulers[0]['scheduler'].step()
-        # self.log('lr', self.trainer.lr_schedulers[0]['scheduler'].get_lr()[0])
 
         return sum(loss_dict.values())
 

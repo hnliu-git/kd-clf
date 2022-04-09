@@ -3,7 +3,6 @@ Data module for classification task, require a dataset object as input
 Author: Haonan Liu
 Last Modified: 09.02.2022
 '''
-import datasets
 import torch
 
 from typing import Optional

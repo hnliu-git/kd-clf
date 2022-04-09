@@ -10,12 +10,9 @@ data:
 # Distillation configs
 
 distillation:
-  epochs: 3
+  epochs: 20
   learning_rate: 3e-5
-  loss_list_ptr:
-    - 'embd:mse'
-    - 'hidn:mse'
-  loss_list_ft:
+  loss_list:
     - 'pred:nll'
     - 'pred:mse'
     - 'hidn:mse'
@@ -23,7 +20,7 @@ distillation:
 # Weight-and-bias config
 wandb:
   project: knowledge-distillation-sst2
-  exp: test
+  exp: bert2tiny-rand-warmup
 
 # Teacher
 teacher_model:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22

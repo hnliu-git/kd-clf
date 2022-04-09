@@ -32,7 +32,6 @@ def get_args(yaml_path):
                         help="pretrained student model, the default is the bert_tiny model")
 
     # Data configs
-    parser.add_argument("--trr_dataset", default=None, type=str)
     parser.add_argument("--trn_dataset", default=None, type=str, required=True)
     parser.add_argument("--val_dataset", default=None, type=str, required=True)
 
@@ -41,7 +40,6 @@ def get_args(yaml_path):
 
     config = yaml.load(open(yaml_path), Loader=yaml.FullLoader)
     args = parser.parse_args(serialize_config(config))
-    args.loss_list = args.loss_list_ft
 
     return args
 
@@ -57,7 +55,7 @@ def get_dataset_obj(args):
     elif args.trn_dataset == 'sst2-tweet':
         from datasets import concatenate_datasets
         train = concatenate_datasets([
-            sst2.remove_columns(['idx', 'label'])['train'],
+            sst2.remove_columns(['label', 'idx'])['train'],
             tweet.remove_columns(['label'])['train']
         ])
 
@@ -70,7 +68,8 @@ def get_dataset_obj(args):
         tweet['train'] = train
         dataset = tweet
 
-    args.num_training_steps = int(len(train)/args.batch_size) * min(args.epochs, 10)
+    args.num_training_steps = int(len(train)/args.batch_size) * args.epochs
+    args.num_warmup_steps = int(len(train)/args.batch_size) * min(1, int(0.1*args.epochs))
 
     return dataset
 
