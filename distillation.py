@@ -2,9 +2,9 @@
 import yaml
 import pytorch_lightning as pl
 
-from model.adpator import *
+from helper.adpator import *
 from data.data_module import ClfDataModule
-from model.distiller import BaseDistiller, HgCkptIO
+from helper.distiller import BaseDistiller, HgCkptIO
 
 from utils import serialize_config, path_to_clf_model
 from datasets import load_dataset
