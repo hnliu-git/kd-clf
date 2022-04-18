@@ -15,16 +15,16 @@ distillation:
   loss_list:
     - 'pred:nll'
     - 'pred:mse'
-    - 'hidn:mse'
+#    - 'hidn:mse'
 
 # Weight-and-bias config
 wandb:
-  project: knowledge-distillation-sst2
-  exp: bert2tiny-rand-warmup
+  project: knowledge-distillation-berttiny
+  exp: rand-sst2-glu
 
 # Teacher
 teacher_model:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Student
-student_model: configs/bert_uncased/bert_tiny_uncased.yaml
+student_model: configs/bert_uncased_glu/tiny.yaml
 
