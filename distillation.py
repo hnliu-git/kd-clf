@@ -106,6 +106,7 @@ if __name__ == '__main__':
     trainer = Trainer(
         gpus=1,
         logger=wandb_logger,
+        max_epochs=args.epochs,
         callbacks=[LearningRateMonitor(logging_interval='step')]
     )
 
