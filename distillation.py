@@ -73,6 +73,9 @@ def get_dataset_obj(args):
 
     return dataset
 
+from transformers.models.bert import modeling_bert, configuration_bert
+from transformers import modeling_outputs
+
 
 if __name__ == '__main__':
 
@@ -91,7 +94,6 @@ if __name__ == '__main__':
 
     # Setup adaptor
     attn_adaptor = AttnMiniLMAdaptor()
-    # w_hidn = torch.rand(teacher.config.hidden_size, student.config.hidden_size, requires_grad=True).cuda()
     hidn_adaptor = HidnRelnAdaptor()
 
     # Setup lightning
@@ -100,7 +102,7 @@ if __name__ == '__main__':
         student,
         args,
         attn_adaptor,
-        hidn_adaptor
+        hidn_adaptor,
     )
 
     trainer = Trainer(
@@ -111,7 +113,7 @@ if __name__ == '__main__':
     )
 
     trainer.fit(distiller, dm)
-
+from transformers.models.bert import modeling_bert
     # early_stopping = EarlyStopping(
     #     mode='min',
     #     patience=6,

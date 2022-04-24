@@ -1,6 +1,6 @@
 
 import torch
-from torch.nn import Module
+from torch import nn
 
 
 class AttnMiniLMAdaptor:
@@ -37,7 +37,7 @@ class AttnAdaptor:
         :param Tuple tuple_t: contains tensors of shape  (*batch_size*, *num_heads*, *length*, *length*)
         :param Tuple tuple_s: contains tensor sof shape  (*batch_size*, *num_heads*, *length*, *length*)
         '''
-        attn_t = torch.cat(attn_t[:len(attn_s)])
+        attn_t = torch.cat(attn_t[-len(attn_s):])
         attn_s = torch.cat(attn_s)
         attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
         attn_s = torch.where(attn_s <= -1e-3, torch.zeros_like(attn_s), attn_s)
@@ -45,18 +45,16 @@ class AttnAdaptor:
         return attn_t, attn_s
 
 
-class HidnAdaptor(Module):
+class HidnAdaptor(nn.Module):
 
-    def __init__(self, w):
+    def __init__(self, config, hidden_size_t=768):
         super().__init__()
-        self.w = torch.nn.ParameterDict({
-            "hidn": torch.nn.Parameter(w)
-        })
+        self.w = torch.nn.Linear(config.hidden_size, hidden_size_t, bias=False)
 
     def __call__(self, hidn_t, hidn_s):
-        hidn_t = torch.cat(hidn_t[:len(hidn_s)])
+        hidn_t = torch.cat(hidn_t[-len(hidn_s):])
         hidn_s = torch.cat(hidn_s)
-        hidn_t = torch.matmul(hidn_t, self.w['hidn'])
+        hidn_s = self.w(hidn_s)
 
         return hidn_t, hidn_s
 
@@ -70,8 +68,15 @@ class HidnRelnAdaptor():
         hidn_t = hidn_t[-1]
         hidn_s = hidn_s[-1]
 
-        reln_t = torch.bmm(hidn_t, hidn_t.transpose(1, 2)) / hidn_t.size(2)
-        reln_s = torch.bmm(hidn_s, hidn_s.transpose(1, 2)) / hidn_s.size(2)
+        batch, head, seq, _ = hidn_t.size()
+
+        hidn_t = hidn_t.reshape(batch * head, seq, hidn_t.size()[-1])
+        hidn_s = hidn_s.reshape(batch * head, seq, hidn_s.size()[-1])
+
+        # reln_t = torch.einsum('b i d, b j d -> b i j', hidn_t, hidn_t) / hidn_t.size(2)
+        # reln_s = torch.einsum('b i d, b j d -> b i j', hidn_s, hidn_s) / hidn_s.size(2)
+        reln_t = torch.bmm(hidn_t, hidn_t.transpose(1, 2))
+        reln_s = torch.bmm(hidn_s, hidn_s.transpose(1, 2))
 
         return reln_t, reln_s
 

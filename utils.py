@@ -18,6 +18,7 @@ def path_to_clf_model(path: str, num_classes: int):
 
     model.config.output_attentions = True
     model.config.output_hidden_states = True
+    model.config.output_values = True
 
     return model
 

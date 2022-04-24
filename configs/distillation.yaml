@@ -13,18 +13,21 @@ distillation:
   epochs: 20
   learning_rate: 3e-5
   loss_list:
-    - 'pred:nll'
-    - 'pred:mse'
+#    - 'pred:nll'
+    - 'attn:mse'
+    - 'val:mse'
 #    - 'hidn:mse'
+#    - 'embd:mse'
 
 # Weight-and-bias config
 wandb:
-  project: knowledge-distillation-berttiny
-  exp: rand-sst2-glu
+  project: kd-minilm
+  exp: tiny-sst2-test
 
 # Teacher
 teacher_model:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Student
-student_model: configs/bert_uncased_glu/tiny.yaml
+student_model: configs/bert_uncased_a12/tiny.yaml
+
 
