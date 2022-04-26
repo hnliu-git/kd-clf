@@ -71,7 +71,7 @@ class BaseDistiller(LightningModule):
 
         # Metrics
         self.acc_s = torchmetrics.Accuracy(num_classes=args.num_classes)
-        self.f1_s = torchmetrics.F1(num_classes=args.num_classes)
+        self.f1_s = torchmetrics.F1Score(num_classes=args.num_classes)
 
         # loss functions
         self.loss_func = {
