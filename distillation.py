@@ -30,6 +30,7 @@ def get_args(yaml_path):
     # Student Model
     parser.add_argument("--student_model", default=None, type=str,
                         help="pretrained student model, the default is the bert_tiny model")
+    parser.add_argument("--ckpt_path", default='ckpts', type=str)
 
     # Data configs
     parser.add_argument("--trn_dataset", default=None, type=str, required=True)
@@ -105,35 +106,23 @@ if __name__ == '__main__':
         hidn_adaptor,
     )
 
+    ckpt_callback = ModelCheckpoint(
+        dirpath=args.ckpt_path,
+        monitor='val_acc_s',
+        filename="%s-%s-{epoch:02d}-{val_acc_s:.2f}"
+                 % (args.val_dataset, args.student_model.split('/')[-1]),
+    )
     trainer = Trainer(
         gpus=1,
         logger=wandb_logger,
+        plugins=[HgCkptIO()],
         max_epochs=args.epochs,
-        callbacks=[LearningRateMonitor(logging_interval='step')]
+        callbacks=[
+            ckpt_callback,
+            LearningRateMonitor(logging_interval='step'),
+        ]
     )
 
     trainer.fit(distiller, dm)
-from transformers.models.bert import modeling_bert
-    # early_stopping = EarlyStopping(
-    #     mode='min',
-    #     patience=6,
-    #     min_delta=0.01,
-    #     monitor='val_nll_loss'
-    # )
 
-    # if args.student_model:
-    #     student_name = args.student_model.split('/'[-1])
-    # else:
-    #     student_name = 'bert_uncased_rand_L-%d_H-%d_A_%d'%(
-    #         args.hidden_layers,
-    #         args.hidden_size,
-    #         args.attn_heads
-    #     )
-    #
-    # ckpt_callback = ModelCheckpoint(
-    #     dirpath=args.ckpt_path,
-    #     monitor='val_loss',
-    #     save_top_k=2,
-    #     filename="%s-%s-{epoch:02d}-{val_loss:.2f}"
-    #              % (args.val_dataset, student_name),
-    # )
+

@@ -1,3 +1,4 @@
+import math
 
 import torch
 from torch import nn
@@ -75,8 +76,11 @@ class HidnRelnAdaptor():
 
         # reln_t = torch.einsum('b i d, b j d -> b i j', hidn_t, hidn_t) / hidn_t.size(2)
         # reln_s = torch.einsum('b i d, b j d -> b i j', hidn_s, hidn_s) / hidn_s.size(2)
-        reln_t = torch.bmm(hidn_t, hidn_t.transpose(1, 2))
-        reln_s = torch.bmm(hidn_s, hidn_s.transpose(1, 2))
+        reln_t = torch.bmm(hidn_t, hidn_t.transpose(1, 2)) / math.sqrt(hidn_t.size()[-1])
+        reln_s = torch.bmm(hidn_s, hidn_s.transpose(1, 2)) / math.sqrt(hidn_s.size()[-1])
+
+        reln_t = torch.softmax(reln_t, dim=-1)
+        reln_s = torch.softmax(reln_s, dim=-1)
 
         return reln_t, reln_s
 

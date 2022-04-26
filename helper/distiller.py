@@ -71,7 +71,7 @@ class BaseDistiller(LightningModule):
 
         # Metrics
         self.acc_s = torchmetrics.Accuracy(num_classes=args.num_classes)
-        self.acc_t = torchmetrics.Accuracy(num_classes=args.num_classes)
+        self.f1_s = torchmetrics.F1(num_classes=args.num_classes)
 
         # loss functions
         self.loss_func = {
@@ -90,31 +90,31 @@ class BaseDistiller(LightningModule):
                     continue
                 score_t = out_t.logits
                 score_s = out_s.logits
-                loss = self.loss_func[func](score_t, score_s)
+                loss = self.loss_func[func](score_s, score_t)
                 loss_dict[name+':'+func] = loss
             elif name == 'attn':
                 attn_t = out_t.attentions
                 attn_s = out_s.attentions
                 tsr_t, tsr_s = self.attn_adaptor(attn_t, attn_s)
-                loss = self.loss_func[func](tsr_t, tsr_s)
-                loss_dict[name + ':' + func] = loss
+                loss = self.loss_func[func](tsr_s, tsr_t)
+                loss_dict[name + ':' + func] = 100*loss
             elif name == 'hidn':
                 hidn_t = out_t.hidden_states[1:]
                 hidn_s = out_s.hidden_states[1:]
                 tsr_t, tsr_s = self.hidn_adaptor(hidn_t, hidn_s)
-                loss = self.loss_func[func](tsr_t, tsr_s)
+                loss = self.loss_func[func](tsr_s, tsr_t)
                 loss_dict[name + ':' + func] = loss
             elif name == 'val':
                 val_t = out_t.values[-1:]
                 val_s = out_s.values[-1:]
                 tsr_t, tsr_s = self.hidn_adaptor(val_t, val_s)
-                loss = self.loss_func[func](tsr_t, tsr_s) / tsr_t.size()[1]
-                loss_dict[name + ':' + func] = loss
+                loss = self.loss_func[func](tsr_s, tsr_t)
+                loss_dict[name + ':' + func] = 100*loss
             elif name == 'embd':
                 embd_t = out_t.hidden_states[0:1]
                 embd_s = out_s.hidden_states[0:1]
                 tsr_t, tsr_s = self.hidn_adaptor(embd_t, embd_s)
-                loss = self.loss_func[func](tsr_t, tsr_s)
+                loss = self.loss_func[func](tsr_s, tsr_t)
                 loss_dict[name + ':' + func] = loss
 
         nll_t = out_t.loss
@@ -186,11 +186,10 @@ class BaseDistiller(LightningModule):
 
     def validation_step(self, batch, idx):
         labels = batch['label']
-        out_t, out_s = self(batch)
-        pred_t = torch.argmax(out_t.logits, dim=1)
+        _, out_s = self(batch)
         pred_s = torch.argmax(out_s.logits, dim=1)
 
-        self.acc_t(pred_t, labels)
+        self.f1_s(pred_s, labels)
         self.acc_s(pred_s, labels)
 
         return {'val_nll_loss': out_s.loss}
@@ -198,7 +197,7 @@ class BaseDistiller(LightningModule):
     def validation_epoch_end(self, outputs) -> None:
         val_loss = torch.stack([x["val_nll_loss"] for x in outputs]).mean()
         self.log("val_nll_loss", val_loss, prog_bar=True, logger=True)
-        self.log('val_acc_t', self.acc_t)
+        self.log('val_f1_t', self.f1_s)
         self.log('val_acc_s', self.acc_s)
 
     def on_save_checkpoint(self, checkpoint) -> None:

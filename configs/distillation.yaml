@@ -13,21 +13,24 @@ distillation:
   epochs: 20
   learning_rate: 3e-5
   loss_list:
-#    - 'pred:nll'
-    - 'attn:mse'
-    - 'val:mse'
+    - 'pred:nll'
+    - 'pred:mse'
+#    - 'attn:mse'
+#    - 'val:mse'
 #    - 'hidn:mse'
 #    - 'embd:mse'
 
 # Weight-and-bias config
 wandb:
-  project: kd-minilm
-  exp: tiny-sst2-test
+  project: kd-init
+  exp: minilmL12-sst2
 
 # Teacher
 teacher_model:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Student
-student_model: configs/bert_uncased_a12/tiny.yaml
+student_model: huawei-noah/TinyBERT_General_4L_312D
+
+ckpt_path: ckpts/
 
 
