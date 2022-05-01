@@ -4,6 +4,7 @@ from typing import List, Dict
 from transformers import (
     AutoModelForSequenceClassification,
     BertConfig,
+    BertForMaskedLM,
     BertForSequenceClassification
 )
 
@@ -19,6 +20,17 @@ def path_to_clf_model(path: str, num_classes: int):
     model.config.output_attentions = True
     model.config.output_hidden_states = True
     model.config.output_values = True
+
+    return model
+
+
+def path_to_mlm_model(path: str):
+    if 'yaml' in path:
+        args = yaml.load(open(path), Loader=yaml.FullLoader)
+        config = BertConfig(**args)
+        model = BertForMaskedLM(config)
+    else:
+        model = BertForMaskedLM.from_pretrained(path)
 
     return model
 

@@ -134,14 +134,8 @@ class BaseDistiller(LightningModule):
         """
         self.teacher.eval()
 
-        if 'label' in batch:
-            x, labels = batch['sentence'], batch['label']
-            teacher_out = self.teacher(**x, labels=labels)
-            student_out = self.student(**x, labels=labels)
-        else:
-            x = batch['sentence']
-            teacher_out = self.teacher(**x)
-            student_out = self.student(**x)
+        teacher_out = self.teacher(**batch)
+        student_out = self.student(**batch)
 
         return teacher_out, student_out
 
@@ -185,7 +179,7 @@ class BaseDistiller(LightningModule):
         return sum(loss_dict.values())
 
     def validation_step(self, batch, idx):
-        labels = batch['label']
+        labels = batch['labels']
         _, out_s = self(batch)
         pred_s = torch.argmax(out_s.logits, dim=1)
 
@@ -197,7 +191,7 @@ class BaseDistiller(LightningModule):
     def validation_epoch_end(self, outputs) -> None:
         val_loss = torch.stack([x["val_nll_loss"] for x in outputs]).mean()
         self.log("val_nll_loss", val_loss, prog_bar=True, logger=True)
-        self.log('val_f1_t', self.f1_s)
+        self.log('val_f1_s', self.f1_s)
         self.log('val_acc_s', self.acc_s)
 
     def on_save_checkpoint(self, checkpoint) -> None:

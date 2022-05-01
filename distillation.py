@@ -79,6 +79,8 @@ from transformers import modeling_outputs
 
 
 if __name__ == '__main__':
+    import os
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     pl.seed_everything(2022)
     args = get_args('configs/distillation.yaml')

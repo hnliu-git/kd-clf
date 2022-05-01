@@ -7,7 +7,6 @@ import torch
 
 from typing import Optional
 from itertools import chain
-from functools import partial
 from argparse import ArgumentParser
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 from torch.utils.data import DataLoader
@@ -26,9 +25,6 @@ class PtrDataModule(LightningDataModule):
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
         parser.add_argument("--max_seq_length", type=int, default=512)
-        parser.add_argument("--load_data_from_disk", type=bool, default=False)
-        parser.add_argument("--data_dir", type=str, default=None)
-        parser.add_argument("--cache_dir", type=str, default=None)
         parser.add_argument("--val_split_per", type=float, default=10,
                             help="Percentage of spliting if the dataset doesn't have validation key")
         parser.add_argument("--mlm_prob", type=float, default=0.15,
@@ -68,7 +64,7 @@ class PtrDataModule(LightningDataModule):
             }
             return result
 
-        if not self.args.load_data_from_disk:
+        if not self.args.load_data_dir:
             max_seq_length = self.args.max_seq_length
             column_names = self.raw_dataset['train'].column_names
             text_column_name = "text" if "text" in column_names else column_names[0]
@@ -89,8 +85,8 @@ class PtrDataModule(LightningDataModule):
                 num_proc=self.args.num_workers,
                 desc=f"Grouping texts in chunks of {max_seq_length}",
             )
-            if self.args.data_dir:
-                tokenized_datasets.save_to_disk(self.args.data_dir)
+            if self.args.save_data_dir:
+                tokenized_datasets.save_to_disk(self.args.save_data_dir)
         else:
             tokenized_datasets = self.raw_dataset
 
@@ -127,6 +123,8 @@ class ClfDataModule(LightningDataModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--batch_size", type=int, default=256,
                             help="Batch size.")
+        parser.add_argument('--max_length', type=int, default=128,
+                            help='max sequence length')
         parser.add_argument("--num_workers", type=int, default=8,
                             help="Number of workers for data loading.")
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
@@ -136,25 +134,31 @@ class ClfDataModule(LightningDataModule):
         return parser
 
     @staticmethod
-    def collate_fn_def(batch, tkr, text_column):
-        labels = []
-        sents = []
-        for item in batch:
-            labels.append(item['label'])
-            sents.append(item[text_column])
-        return {
-            'sentence': tkr(sents, padding=True, return_tensors='pt'),
-            'label': torch.LongTensor(labels)
+    def collate_fn_def(batch):
+        has_label = True if 'label' in batch[0] else False
+
+        batch_dict = {
+            'input_ids': [],
+            'token_type_ids': [],
+            'attention_mask': [],
+            'labels': []
         }
 
-    @staticmethod
-    def collate_fn_wol(batch, tkr, text_column):
-        sents = []
+        if not has_label:
+            batch_dict.pop('labels')
+
         for item in batch:
-            sents.append(item[text_column])
-        return {
-            'sentence': tkr(sents, padding=True, return_tensors='pt'),
-        }
+            batch_dict['input_ids'].append(torch.LongTensor(item['input_ids']))
+            batch_dict['token_type_ids'].append(torch.LongTensor(item['token_type_ids']))
+            batch_dict['attention_mask'].append(torch.LongTensor(item['attention_mask']))
+            if has_label: batch_dict['labels'].append(torch.LongTensor([item['label']]))
+
+        batch_dict = {k:torch.stack(v, dim=0) for k, v in batch_dict.items()}
+
+        if has_label:
+            batch_dict['labels'] = torch.squeeze(batch_dict['labels'])
+
+        return batch_dict
 
     def __init__(self, dataset, hparams):
         '''
@@ -168,23 +172,32 @@ class ClfDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None) -> None:
         self.text_column = self.dataset.column_names['train'][0]
+
         self.train = self.dataset['train']
         self.val = self.dataset['validation']
         self.test = self.dataset['test']
 
-    def train_dataloader(self):
-        if self.hparams.train_with_label:
-            collate_fn = self.collate_fn_def
-        else:
-            collate_fn = self.collate_fn_wol
+        self.train = self.train.map(lambda e: self.tokenizer(e[self.text_column],
+                                                                 truncation=True,
+                                                                 padding='max_length',
+                                                                 max_length=self.hparams.max_length))
+        self.val = self.val.map(lambda e: self.tokenizer(e[self.text_column],
+                                                                 truncation=True,
+                                                                 padding='max_length',
+                                                                 max_length=self.hparams.max_length))
+        self.test = self.test.map(lambda e: self.tokenizer(e[self.text_column],
+                                                                 truncation=True,
+                                                                 padding='max_length',
+                                                                 max_length=self.hparams.max_length))
 
+    def train_dataloader(self):
         self.train_loader = DataLoader(
             self.train,
             batch_size=self.hparams.batch_size,
             shuffle=True,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(collate_fn, tkr=self.tokenizer, text_column=self.text_column),
+            collate_fn=self.collate_fn_def,
         )
         return self.train_loader
 
@@ -195,7 +208,7 @@ class ClfDataModule(LightningDataModule):
             shuffle=False,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.collate_fn_def, tkr=self.tokenizer, text_column=self.text_column),
+            collate_fn=self.collate_fn_def,
         )
         return self.valid_loader
 
@@ -206,6 +219,6 @@ class ClfDataModule(LightningDataModule):
             shuffle=True,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
-            collate_fn=partial(self.collate_fn_def, tkr=self.tokenizer, text_column=self.text_column),
+            collate_fn=self.collate_fn_def,
         )
         return self.test_loader

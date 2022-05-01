@@ -6,9 +6,10 @@ from utils import *
 from datasets import load_dataset, load_from_disk
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
-from model.pretrainer import Pretrainer
+from helper.pretrainer import Pretrainer, HgCkptIO
 from data.data_module import PtrDataModule
 from pytorch_lightning.loggers import WandbLogger
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
 
 
 def get_args(yaml_path):
@@ -19,6 +20,17 @@ def get_args(yaml_path):
                         help='wandb project name')
     parser.add_argument('--exp', type=str,
                         help='wandb experiement name')
+
+    # Dataset
+    parser.add_argument('--dataset_name', type=str)
+    parser.add_argument('--dataset_cfgs', type=str, default=None)
+    parser.add_argument("--load_data_dir", type=str, default=None)
+    parser.add_argument('--save_data_dir', type=str, default=None)
+    parser.add_argument("--cache_dir", type=str, default=None)
+
+    # Student Config
+    parser.add_argument('--model', default=None, required=True, type=str,
+                        help="path to the configurations of the model")
 
     parser = Pretrainer.add_model_specific_args(parser)
     parser = PtrDataModule.add_model_specific_args(parser)
@@ -51,6 +63,9 @@ def prepare_dataset(dataset_name, dataset_cfg, args):
             cache_dir=args.cache_dir
         )
 
+    args.num_training_steps = int(len(raw_dataset['train'])/args.batch_size) * args.epochs
+    args.num_warmup_steps = int(len(raw_dataset['train'])/args.batch_size) * min(1, int(0.1*args.epochs))
+
     return raw_dataset
 
 
@@ -61,18 +76,34 @@ if __name__ == '__main__':
     # Logger
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    if args.load_data_from_disk:
-        dataset = load_from_disk(args.data_dir)
+    if args.load_data_dir:
+        dataset = load_from_disk(args.load_data_dir)
     else:
-        dataset = prepare_dataset('wikipedia', '20200501.en', args)
+        dataset = prepare_dataset(args.dataset_name, args.dataset_cfgs, args)
 
     dm = PtrDataModule(dataset, args)
+    model = path_to_mlm_model(args.model)
+    pretrainer = Pretrainer(model, args)
 
-    pretrainer = Pretrainer(args)
+    ckpt_callback = ModelCheckpoint(
+        dirpath=args.ckpt_path,
+        monitor='perplexity',
+        save_top_k=3,
+        mode='min',
+        filename="%s-{epoch:02d}-{perplexity:.2f}"
+                 % (args.model.split('/')[-1]),
+    )
     trainer = Trainer(
         gpus=1,
-        logger=wandb_logger
+        logger=wandb_logger,
+        plugins=[HgCkptIO()],
+        max_epochs=args.epochs,
+        callbacks=[
+            ckpt_callback,
+            LearningRateMonitor(logging_interval='step'),
+        ]
     )
+
 
     trainer.fit(pretrainer, dm)
 

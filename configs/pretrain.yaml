@@ -1,22 +1,24 @@
 
-# Data module configs
-data:
-  batch_size: 128
-  num_workers: 4
-  mlm_prob: 0.15
-  max_seq_length: 128
-  data_dir: /content/drive/MyDrive/thesis/cache/wikipedia_processed
-  cache_dir: /content/drive/MyDrive/thesis/cache
-  load_data_from_disk: 1
-  tokenizer: bert-base-uncased
-
-
 # Weight-and-bias config
 wandb:
   project: pretrain
   exp: test
 
+# Data module configs
+data:
+  dataset_name: tweet_eval
+  dataset_cfgs: emotion
+  tokenizer: bert-base-uncased
+  batch_size: 32
+  max_seq_length: 128
+  mlm_prob: 0.15
+  num_workers: 4
+#  load_data_dir: /content/drive/MyDrive/thesis/cache/wikipedia_processed
+  save_data_dir: /media/haonan/PROJECT/Ubuntu/processed/${data.dataset_name}
+  cache_dir: /media/haonan/PROJECT/Ubuntu/cache
+
+# Pre-trained configs
+epochs: 20
+
 # The model
-hidden_size: 96
-hidden_layers: 2
-atten_heads: 12
+model: configs/bert_uncased_a12/tiny.yaml

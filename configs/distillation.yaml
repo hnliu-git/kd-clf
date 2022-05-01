@@ -1,7 +1,7 @@
 
 # Data module configs
 data:
-  batch_size: 32
+  batch_size: 16
   val_dataset: 'sst2' # options ['sst2', 'tweet']
   trn_dataset: 'sst2' # options ['sst2', 'tweet', 'sst2-tweet']
   tokenizer: google/bert_uncased_L-2_H-128_A-2

@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from typing import Any, Dict, Optional
 from pytorch_lightning.utilities.types import _PATH
+from transformers import get_linear_schedule_with_warmup
 
 import os
 import math
@@ -9,10 +10,6 @@ import torch
 from pytorch_lightning import LightningModule
 from pytorch_lightning.plugins import CheckpointIO
 from pytorch_lightning.utilities.cloud_io import get_filesystem
-from transformers import (
-    BertConfig,
-    BertForMaskedLM
-)
 
 
 class HgCkptIO(CheckpointIO):
@@ -27,7 +24,7 @@ class HgCkptIO(CheckpointIO):
         '''
         fs = get_filesystem(path)
         fs.makedirs(os.path.dirname(path), exist_ok=True)
-        checkpoint['hg_model'].save_pretrained(path.replace('.ckpt', ''))
+        checkpoint['hg_model'].save_pretrained(path)
 
     def load_checkpoint(self, path: _PATH, storage_options: Optional[Any] = None) -> Dict[str, Any]:
         pass
@@ -51,15 +48,8 @@ class Pretrainer(LightningModule):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--ckpt_path", default='ckpts', type=str)
 
-        # Model Configs
-        parser.add_argument("--hidden_size", default=768, type=int,
-                            help="Dim of the encoder layer and pooler layer of the student")
-        parser.add_argument("--hidden_layers", default=12, type=int,
-                            help="Number of hidden layers in encoder of the student")
-        parser.add_argument("--atten_heads", default=12, type=int,
-                            help="Number of attention heads of the student")
-
         # Training Configs
+        parser.add_argument('--epochs', default=20, type=int)
         parser.add_argument("--weight_decay", default=5e-5, type=float)
         parser.add_argument("--learning_rate", default=2e-5, type=float)
         parser.add_argument("--eps", default=1e-8, type=float)
@@ -67,17 +57,10 @@ class Pretrainer(LightningModule):
 
         return parser
 
-    def __init__(self, args):
+    def __init__(self, model, args):
         super().__init__()
         self.save_hyperparameters(args)
-
-        config = BertConfig(
-            hidden_size=args.hidden_size,
-            num_hidden_layers=args.hidden_layers,
-            num_attention_heads=args.atten_heads
-        )
-
-        self.model = BertForMaskedLM(config)
+        self.model = model
 
     def forward(self, batch):
         """
@@ -93,13 +76,16 @@ class Pretrainer(LightningModule):
 
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
+
+        parameters = [(n, p) for n, p in self.named_parameters()]
+
         optimizer_grouped_parameters = [
             {
-                "params": [p for n, p in self.model.named_parameters() if not any(nd in n for nd in no_decay)],
+                "params": [p for n, p in parameters if not any(nd in n for nd in no_decay)],
                 "weight_decay": self.hparams.weight_decay,
             },
             {
-                "params": [p for n, p in self.model.named_parameters() if any(nd in n for nd in no_decay)],
+                "params": [p for n, p in parameters if any(nd in n for nd in no_decay)],
                 "weight_decay": 0.0,
             },
         ]
@@ -108,14 +94,13 @@ class Pretrainer(LightningModule):
                                       lr=self.hparams.learning_rate,
                                       eps=self.hparams.eps,)
 
-        def fn_lambda(epoch):
-            if epoch < 1:
-                return 0.01
-            else:
-                return 0.85 ** (epoch - 1)
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer,
+            num_training_steps=self.hparams.num_training_steps,
+            num_warmup_steps=self.hparams.num_warmup_steps
+        )
 
-        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=[fn_lambda, fn_lambda])
-        return [optimizer], [scheduler]
+        return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
     def training_step(self, batch, idx):
         loss = self(batch).loss
