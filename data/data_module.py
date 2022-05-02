@@ -24,7 +24,7 @@ class PtrDataModule(LightningDataModule):
                             help="Number of workers for data loading.")
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
-        parser.add_argument("--max_seq_length", type=int, default=512)
+        parser.add_argument("--max_length", type=int, default=512)
         parser.add_argument("--val_split_per", type=float, default=10,
                             help="Percentage of spliting if the dataset doesn't have validation key")
         parser.add_argument("--mlm_prob", type=float, default=0.15,
@@ -129,7 +129,6 @@ class ClfDataModule(LightningDataModule):
                             help="Number of workers for data loading.")
         parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
                             help="tokenizer model")
-        parser.add_argument("--train_with_label", type=bool, default=False)
 
         return parser
 

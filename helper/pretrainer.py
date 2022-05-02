@@ -53,7 +53,6 @@ class Pretrainer(LightningModule):
         parser.add_argument("--weight_decay", default=5e-5, type=float)
         parser.add_argument("--learning_rate", default=2e-5, type=float)
         parser.add_argument("--eps", default=1e-8, type=float)
-        parser.add_argument("--num_classes", default=2, type=int)
 
         return parser
 

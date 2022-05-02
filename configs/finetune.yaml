@@ -2,20 +2,22 @@
 # Data module configs
 data:
   batch_size: 32
-  tokenizer: bert-base-uncased
-  dataset_name: 'tweet' # options ['sst2', 'tweet']
+  max_length: 128
+  tokenizer: google/bert_uncased_L-2_H-128_A-2
+  dataset_name: 'sst2' # options ['sst2', 'tweet']
 
 # Distillation configs
 training:
-  learning_rate: 2e-5
+  epochs: 6
+  learning_rate: 3e-5
 
 # Weight-and-bias config
 wandb:
   project: finetune
-  exp: bert-base-uncased-tweet
+  exp: bert_uncased_L-2_H-128_A-2-sst2
 
 # Setting pre-trained model
-model: bert-base-uncased
+model: google/bert_uncased_L-2_H-128_A-2
 ckpt_path: ckpts/
 
 

@@ -10,7 +10,7 @@ data:
   dataset_cfgs: emotion
   tokenizer: bert-base-uncased
   batch_size: 32
-  max_seq_length: 128
+  max_length: 128
   mlm_prob: 0.15
   num_workers: 4
 #  load_data_dir: /content/drive/MyDrive/thesis/cache/wikipedia_processed
