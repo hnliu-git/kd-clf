@@ -64,7 +64,7 @@ def prepare_dataset(dataset_name, dataset_cfg, args):
         )
 
     args.num_training_steps = int(len(raw_dataset['train'])/args.batch_size) * args.epochs
-    args.num_warmup_steps = int(len(raw_dataset['train'])/args.batch_size) * min(1, int(0.1*args.epochs))
+    args.num_warmup_steps = 0.01 * args.num_training_steps
 
     return raw_dataset
 
