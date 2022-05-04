@@ -24,7 +24,7 @@ class HgCkptIO(CheckpointIO):
         '''
         fs = get_filesystem(path)
         fs.makedirs(os.path.dirname(path), exist_ok=True)
-        checkpoint['student'].save_pretrained(path.replace('.ckpt', ''))
+        checkpoint['student'].save_pretrained(path)
 
     def load_checkpoint(self, path: _PATH, storage_options: Optional[Any] = None) -> Dict[str, Any]:
         pass
@@ -160,11 +160,19 @@ class BaseDistiller(LightningModule):
 
         return {'val_loss': out_s.loss}
 
+    def test_step(self, batch, idx):
+        labels = batch['labels']
+        _, out_s = self(batch)
+        pred_s = torch.argmax(out_s.logits, dim=1)
+
+        self.f1_s(pred_s, labels)
+        self.acc_s(pred_s, labels)
+
     def validation_epoch_end(self, outputs) -> None:
         val_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
         self.log("val_loss", val_loss, prog_bar=True, logger=True)
-        self.log('val_f1_s', self.f1_s)
-        self.log('val_acc_s', self.acc_s)
+        self.log('val_f1', self.f1_s)
+        self.log('val_acc', self.acc_s)
 
     def on_save_checkpoint(self, checkpoint) -> None:
         """

@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     # Setup adaptors
     adaptors = torch.nn.ModuleList([
-        LogitMSE(),
+        LogitCE(),
         AttnTinyBERT(),
         HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
     ])
@@ -111,7 +111,7 @@ if __name__ == '__main__':
 
     ckpt_callback = ModelCheckpoint(
         dirpath=args.ckpt_path,
-        monitor='val_acc_s',
+        monitor='pred:nll',
         filename="%s-%s-{epoch:02d}-{val_acc_s:.2f}"
                  % (args.val_dataset, args.student_model.split('/')[-1]),
     )
@@ -127,5 +127,3 @@ if __name__ == '__main__':
     )
 
     trainer.fit(distiller, dm)
-
-
