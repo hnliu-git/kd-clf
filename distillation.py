@@ -1,4 +1,3 @@
-
 import yaml
 import pytorch_lightning as pl
 
@@ -11,7 +10,7 @@ from datasets import load_dataset
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 
 def get_args(yaml_path):
@@ -95,17 +94,19 @@ if __name__ == '__main__':
     teacher = path_to_clf_model(args.teacher_model, args.num_classes)
     student = path_to_clf_model(args.student_model, args.num_classes)
 
-    # Setup adaptor
-    attn_adaptor = AttnMiniLMAdaptor()
-    hidn_adaptor = HidnRelnAdaptor()
+    # Setup adaptors
+    adaptors = torch.nn.ModuleList([
+        LogitMSE(),
+        AttnTinyBERT(),
+        HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
+    ])
 
     # Setup lightning
     distiller = BaseDistiller(
         teacher,
         student,
         args,
-        attn_adaptor,
-        hidn_adaptor,
+        adaptors,
     )
 
     ckpt_callback = ModelCheckpoint(

@@ -10,7 +10,6 @@ from pytorch_lightning.utilities.cloud_io import get_filesystem
 import os
 import torch
 import torchmetrics
-import torch.nn.functional as F
 
 
 class HgCkptIO(CheckpointIO):
@@ -59,67 +58,32 @@ class BaseDistiller(LightningModule):
         parser.add_argument("--loss_list", default=None, type=list)
         return parser
 
-    def __init__(self, teacher, student, args, attn_adaptor=None, hidn_adaptor=None):
+    def __init__(self, teacher, student, args, adaptors):
         super().__init__()
 
         self.save_hyperparameters(args)
 
         self.teacher = teacher
         self.student = student
-        self.attn_adaptor = attn_adaptor
-        self.hidn_adaptor = hidn_adaptor
+        self.adaptors = adaptors
 
         # Metrics
         self.acc_s = torchmetrics.Accuracy(num_classes=args.num_classes)
         self.f1_s = torchmetrics.F1Score(num_classes=args.num_classes)
 
-        # loss functions
-        self.loss_func = {
-            'mse': F.mse_loss,
-            'kld': F.kl_div
+    def compute_loss(self, out_t, out_s, mask=None):
+        loss_dict = {
+            'pred:nll': out_s.get('loss', 0),
+            'nll_loss_teacher': out_t.get('loss', 0)
         }
 
-    def compute_loss(self, out_t, out_s):
-        loss_dict = {}
-        for loss_name in self.hparams.loss_list:
-            name, func = loss_name.split(':')
-            if name == 'pred':
-                if func == 'nll':
-                    if out_s.loss:
-                        loss_dict['pred:nll'] = out_s.loss
-                    continue
-                score_t = out_t.logits
-                score_s = out_s.logits
-                loss = self.loss_func[func](score_s, score_t)
-                loss_dict[name+':'+func] = loss
-            elif name == 'attn':
-                attn_t = out_t.attentions
-                attn_s = out_s.attentions
-                tsr_t, tsr_s = self.attn_adaptor(attn_t, attn_s)
-                loss = self.loss_func[func](tsr_s, tsr_t)
-                loss_dict[name + ':' + func] = 100*loss
-            elif name == 'hidn':
-                hidn_t = out_t.hidden_states[1:]
-                hidn_s = out_s.hidden_states[1:]
-                tsr_t, tsr_s = self.hidn_adaptor(hidn_t, hidn_s)
-                loss = self.loss_func[func](tsr_s, tsr_t)
-                loss_dict[name + ':' + func] = loss
-            elif name == 'val':
-                val_t = out_t.values[-1:]
-                val_s = out_s.values[-1:]
-                tsr_t, tsr_s = self.hidn_adaptor(val_t, val_s)
-                loss = self.loss_func[func](tsr_s, tsr_t)
-                loss_dict[name + ':' + func] = 100*loss
-            elif name == 'embd':
-                embd_t = out_t.hidden_states[0:1]
-                embd_s = out_s.hidden_states[0:1]
-                tsr_t, tsr_s = self.hidn_adaptor(embd_t, embd_s)
-                loss = self.loss_func[func](tsr_s, tsr_t)
-                loss_dict[name + ':' + func] = loss
+        for adaptor in self.adaptors:
+            feature_name = adaptor.name.split(':')[0]
+            loss_dict[adaptor.name] = adaptor.w * adaptor(out_t.get(feature_name),
+                                                          out_s.get(feature_name),
+                                                          mask=mask)
 
-        nll_t = out_t.loss
-
-        return loss_dict, nll_t
+        return loss_dict
 
     def forward(self, batch):
         """
@@ -133,8 +97,9 @@ class BaseDistiller(LightningModule):
             student_out: SequenceClassfierOutput with keys [loss, logits]
         """
         self.teacher.eval()
+        with torch.no_grad():
+            teacher_out = self.teacher(**batch)
 
-        teacher_out = self.teacher(**batch)
         student_out = self.student(**batch)
 
         return teacher_out, student_out
@@ -168,13 +133,20 @@ class BaseDistiller(LightningModule):
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]
 
     def training_step(self, batch, idx):
-        loss_dict, nll_t = self.compute_loss(*self(batch))
+        loss_dict = self.compute_loss(
+            *self(batch),
+            batch.get('attention_mask')
+        )
+
+        if loss_dict['pred:nll'] == 0:
+            loss_dict.pop('pred:nll')
+            loss_dict.pop('nll_loss_teacher')
 
         for k, v in loss_dict.items():
             self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
-        if nll_t:
-            self.log('nll_loss_teacher', nll_t, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+        if 'nll_loss_teacher' in loss_dict:
+            loss_dict.pop('nll_loss_teacher')
 
         return sum(loss_dict.values())
 
@@ -186,11 +158,11 @@ class BaseDistiller(LightningModule):
         self.f1_s(pred_s, labels)
         self.acc_s(pred_s, labels)
 
-        return {'val_nll_loss': out_s.loss}
+        return {'val_loss': out_s.loss}
 
     def validation_epoch_end(self, outputs) -> None:
-        val_loss = torch.stack([x["val_nll_loss"] for x in outputs]).mean()
-        self.log("val_nll_loss", val_loss, prog_bar=True, logger=True)
+        val_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
+        self.log("val_loss", val_loss, prog_bar=True, logger=True)
         self.log('val_f1_s', self.f1_s)
         self.log('val_acc_s', self.acc_s)
 

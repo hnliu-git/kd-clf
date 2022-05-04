@@ -14,10 +14,10 @@ training:
 # Weight-and-bias config
 wandb:
   project: finetune
-  exp: bert-base-uncased-tiny-A12-sst2
+  exp: bert_H192_L4_A12
 
 # Setting pre-trained model
-model: ckpts/bert-base-uncased-tiny-a12
+model: ckpts/bert_H192_L4_A12-epoch=07-perplexity=17.83
 ckpt_path: ckpts/
 
 

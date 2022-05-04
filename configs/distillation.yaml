@@ -1,35 +1,28 @@
 
 # Data module configs
 data:
-  batch_size: 16
+  batch_size: 32
   val_dataset: 'sst2' # options ['sst2', 'tweet']
   trn_dataset: 'sst2' # options ['sst2', 'tweet', 'sst2-tweet']
   tokenizer: google/bert_uncased_L-2_H-128_A-2
-  train_with_label: 1
 
 # Distillation configs
 
 distillation:
-  epochs: 20
+  epochs: 15
   learning_rate: 3e-5
-  loss_list:
-    - 'pred:nll'
-    - 'pred:mse'
-#    - 'attn:mse'
-#    - 'val:mse'
-#    - 'hidn:mse'
-#    - 'embd:mse'
 
 # Weight-and-bias config
 wandb:
-  project: kd-init
-  exp: minilmL12-sst2
+  project: kd_final
+  exp: bert_H192_L4_A12-epoch=19
+
 
 # Teacher
 teacher_model:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22
 
 # Student
-student_model: huawei-noah/TinyBERT_General_4L_312D
+student_model: ckpts/bert_H192_L4_A12-epoch=19-perplexity=14.60
 
 ckpt_path: ckpts/
 
