@@ -6,19 +6,19 @@ wandb:
 
 # Data module configs
 data:
-  dataset_name: tweet_eval
-  dataset_cfgs: emotion
+  dataset_name: bookcorpus
   tokenizer: bert-base-uncased
-  batch_size: 32
+  batch_size: 128
   max_length: 128
   mlm_prob: 0.15
-  num_workers: 4
-#  load_data_dir: /content/drive/MyDrive/thesis/cache/wikipedia_processed
-  save_data_dir: /media/haonan/PROJECT/Ubuntu/processed/${data.dataset_name}
-  cache_dir: /media/haonan/PROJECT/Ubuntu/cache
+  num_workers: 8
+  load_data_dir: /home/jovyan/work/data/processed/bookcorpus
+#  save_data_dir: /home/jovyan/work/data/processed/bookcorpus
+  cache_dir: /home/jovyan/work/data/cache
 
 # Pre-trained configs
 epochs: 20
+gpu: 1
 
 # The model
 model: configs/bert_uncased_a12/tiny.yaml

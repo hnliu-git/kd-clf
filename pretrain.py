@@ -88,6 +88,7 @@ if __name__ == '__main__':
 
     ckpt_callback = ModelCheckpoint(
         dirpath=args.ckpt_path,
+        every_n_epochs=10,
         monitor='perplexity',
         mode='min',
         filename="%s-{epoch:02d}-{perplexity:.2f}"
