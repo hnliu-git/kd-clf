@@ -96,8 +96,8 @@ if __name__ == '__main__':
 
     # Setup adaptors
     adaptors = torch.nn.ModuleList([
-        AttnMiniLM(),
-        ValMiniLM(),
+        LogitCE(),
+        HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
     ])
 
     # Setup lightning

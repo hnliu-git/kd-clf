@@ -184,5 +184,30 @@ class ValMiniLM(nn.Module):
         return loss
 
 
+class HidnPKD(nn.Module):
+
+    def __init__(self, hidn_sz_t, hidn_sz_s, name='hidden_states:mse', w=1):
+        super().__init__()
+        self.linear = torch.nn.Linear(hidn_sz_s, hidn_sz_t, bias=False)
+        self.name = name
+        self.w = w
+
+    def __call__(self, hidn_t, hidn_s, mask=None):
+
+        s_len = len(hidn_s)
+        cls_t = torch.cat(hidn_t[-s_len:])[:, 0]
+        cls_s = torch.cat(hidn_s)[:, 0]
+
+        cls_s = self.linear(cls_s)
+
+        cls_t = cls_t / torch.norm(cls_t, dim=1, keepdim=True)
+        cls_s = cls_s / torch.norm(cls_s, dim=1, keepdim=True)
+
+        loss = (cls_s - cls_t).pow(2).sum(dim=-1).mean()
+
+        return loss
+
+
+
 
 
