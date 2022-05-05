@@ -116,49 +116,72 @@ class HidnTinyBERT(nn.Module):
         return loss
 
 
-class AttnMiniLM:
+class AttnMiniLM(nn.Module):
 
-    def __init__(self):
-        pass
+    def __init__(self, name='attentions:ce', w=1):
+        super().__init__()
+        self.w = w
+        self.name = name
 
-    def __call__(self, attn_t, attn_s):
-        """
-        MiniLM method: only calculate the attention loss of the last layer, use KL Divergence
-        :param Tuple attn_t: contains tensors of shape  (*batch_size*, *num_heads*, *length*, *length*)
-        :param Tuple attn_s: contains tensors of shape  (*batch_size*, *num_heads*, *length*, *length*)
-        :return:
-        """
+    def __call__(self, attn_t, attn_s, mask=None):
+        '''
+        * Calculates the clip mse loss between `tuple_t` and `tuple_s`.
+        * Suitable when the two tuples have different lengths
+        * The function will only calculate between the first len(tuple_s) tensors of tuple_t and tuple_s
+
+        :param Tuple tuple_t: contains tensors of shape  (*batch_size*, *num_heads*, *length*, *length*)
+        :param Tuple tuple_s: contains tensor sof shape  (*batch_size*, *num_heads*, *length*, *length*)
+        '''
         attn_t = torch.cat(attn_t[-1:])
         attn_s = torch.cat(attn_s[-1:])
-        attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
-        attn_s = torch.where(attn_s <= -1e-3, torch.zeros_like(attn_s), attn_s)
 
-        return attn_t, attn_s
+        probs_T = F.softmax(attn_t, dim=-1)
+        if mask is None:
+            probs_T_select = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), probs_T)
+            loss = -((probs_T_select * F.log_softmax(attn_s, dim=-1)).sum(dim=-1)).mean()
+        else:
+            mask = mask.to(attn_s).unsqueeze(1).expand(-1, attn_s.size(1), -1)  # (bs, num_of_heads, len)
+            loss = -((probs_T * F.log_softmax(attn_s, dim=-1) * mask.unsqueeze(2)).sum(
+                dim=-1) * mask).sum() / mask.sum()
+        return loss
 
 
-class HidnReln:
+class ValMiniLM(nn.Module):
 
-    def __init__(self):
-        pass
+    def __init__(self, name='values:ce', w=1):
+        super().__init__()
+        self.name = name
+        self.w = w
 
-    def __call__(self, hidn_t, hidn_s):
-        hidn_t = hidn_t[-1]
-        hidn_s = hidn_s[-1]
+    def __call__(self, val_t, val_s, mask=None):
+        val_t = torch.cat(val_t[-1:])
+        val_s = torch.cat(val_s[-1:])
 
-        batch, head, seq, _ = hidn_t.size()
+        batch, head, seq, t_dim = val_t.size()
+        _, _, _, s_dim = val_s.size()
 
-        hidn_t = hidn_t.reshape(batch * head, seq, hidn_t.size()[-1])
-        hidn_s = hidn_s.reshape(batch * head, seq, hidn_s.size()[-1])
+        if mask is None:
+            val_t = val_t.reshape(batch * head, seq, t_dim)
+            val_s = val_s.reshape(batch * head, seq, s_dim)
 
-        # reln_t = torch.einsum('b i d, b j d -> b i j', hidn_t, hidn_t) / hidn_t.size(2)
-        # reln_s = torch.einsum('b i d, b j d -> b i j', hidn_s, hidn_s) / hidn_s.size(2)
-        reln_t = torch.bmm(hidn_t, hidn_t.transpose(1, 2)) / math.sqrt(hidn_t.size()[-1])
-        reln_s = torch.bmm(hidn_s, hidn_s.transpose(1, 2)) / math.sqrt(hidn_s.size()[-1])
+            reln_t = torch.bmm(val_t, val_t.transpose(1, 2)) / math.sqrt(t_dim)
+            reln_s = torch.bmm(val_s, val_s.transpose(1, 2)) / math.sqrt(s_dim)
 
-        reln_t = torch.softmax(reln_t, dim=-1)
-        reln_s = torch.softmax(reln_s, dim=-1)
+            prob_t = F.softmax(reln_t, dim=-1)
+            loss = -((prob_t * F.log_softmax(reln_s, dim=-1)).sum(dim=-1)).mean()
+        else:
+            mask = torch.cat([mask for _ in range(head)]).to(val_t)
 
-        return reln_t, reln_s
+            val_t = val_t.reshape(batch * head, seq, t_dim)
+            val_s = val_s.reshape(batch * head, seq, s_dim)
+
+            reln_t = torch.bmm(val_t, val_t.transpose(1, 2)) / math.sqrt(t_dim)
+            reln_s = torch.bmm(val_s, val_s.transpose(1, 2)) / math.sqrt(s_dim)
+
+            prob_t = F.softmax(reln_t, dim=-1)
+            loss = -((prob_t * F.log_softmax(reln_s, dim=-1) * mask.unsqueeze(1)).sum(dim=-1)*mask).sum() / mask.sum()
+
+        return loss
 
 
 

@@ -9,13 +9,13 @@ data:
 # Distillation configs
 
 distillation:
-  epochs: 15
+  epochs: 20
   learning_rate: 3e-5
 
 # Weight-and-bias config
 wandb:
   project: kd_final
-  exp: bert_H192_L4_A12-epoch=19
+  exp: test
 
 
 # Teacher
