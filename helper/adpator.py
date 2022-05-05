@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 class LogitMSE(nn.Module):
 
-    def __init__(self, temperature=1.0, name='logits:mse', w=1):
+    def __init__(self, temperature=4.0, name='logits:mse', w=1):
         """
         :param temperature: A float
         """
@@ -33,7 +33,7 @@ class LogitMSE(nn.Module):
 
 class LogitCE(nn.Module):
 
-    def __init__(self, temperature=1.0, name='logits:ce', w=1):
+    def __init__(self, temperature=4.0, name='logits:ce', w=1):
         """
         :param temperature: A float
         """
