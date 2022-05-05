@@ -8,16 +8,16 @@ data:
 
 # Distillation configs
 training:
-  epochs: 10
+  epochs: 20
   learning_rate: 3e-5
 
 # Weight-and-bias config
 wandb:
-  project: finetune
-  exp: bert_H192_L4_A12
+  project: kd_final
+  exp: bert_H192_L4_A12-ft-sst2
 
 # Setting pre-trained model
-model: ckpts/bert_H192_L4_A12-epoch=07-perplexity=17.83
+model: ckpts/bert_H192_L4_A12-epoch=19-perplexity=14.60
 ckpt_path: ckpts/
 
 

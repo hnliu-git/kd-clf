@@ -56,7 +56,7 @@ if __name__ == '__main__':
     pl.seed_everything(2022)
     args = get_args('configs/finetune.yaml')
 
-    # wandb_logger = WandbLogger(project=args.project, name=args.exp)
+    wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
     dm = ClfDataModule(get_dataset_obj(args), args)
     model = path_to_clf_model(args.model, args.num_classes)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         gpus=1,
         # plugins=[HgCkptIO()],
         max_epochs=args.epochs,
-        # logger=wandb_logger,
+        logger=wandb_logger,
         # callbacks=[ckpt_callback]
     )
 

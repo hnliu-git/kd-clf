@@ -107,7 +107,7 @@ class ClfFinetune(LightningModule):
 
     def training_step(self, batch, idx):
         loss = self(batch).loss
-        self.log("train_loss", loss, logger=True)
+        self.log("pred:nll", loss, logger=True)
         return loss
 
     def validation_step(self, batch, idx):
