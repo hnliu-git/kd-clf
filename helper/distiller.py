@@ -55,7 +55,9 @@ class BaseDistiller(LightningModule):
         parser.add_argument("--num_classes", default=2, type=int)
 
         # Distillation Configurations
-        parser.add_argument("--loss_list", default=None, type=list)
+        parser.add_argument("--temperature", default=4, type=float)
+        parser.add_argument("--flood", default=0.1, type=float)
+
         return parser
 
     def __init__(self, teacher, student, args, adaptors):
@@ -143,7 +145,7 @@ class BaseDistiller(LightningModule):
             loss_dict.pop('nll_loss_teacher')
         else:
             # Flooding
-            loss_dict['pred:nll'] = torch.abs(loss_dict['pred:nll'] + 0.1) - 0.1
+            loss_dict['pred:nll'] = torch.abs(loss_dict['pred:nll'] + self.hparams.flood) - self.hparams.flood
 
         for k, v in loss_dict.items():
             self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)

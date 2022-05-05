@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     # Setup adaptors
     adaptors = torch.nn.ModuleList([
-        LogitCE(),
+        LogitCE(args.temperature),
         HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
     ])
 
