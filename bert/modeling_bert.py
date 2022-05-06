@@ -328,11 +328,11 @@ class BertSelfAttention(nn.Module):
             attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
-        attention_probs = nn.functional.softmax(attention_scores, dim=-1)
+        attention_probs_ori = nn.functional.softmax(attention_scores, dim=-1)
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-        attention_probs = self.dropout(attention_probs)
+        attention_probs = self.dropout(attention_probs_ori)
 
         # Mask heads if we want to
         if head_mask is not None:
@@ -344,7 +344,7 @@ class BertSelfAttention(nn.Module):
         new_context_layer_shape = context_layer.size()[:-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
-        outputs = (context_layer, attention_probs) if output_attentions else (context_layer,)
+        outputs = (context_layer, attention_probs_ori) if output_attentions else (context_layer,)
         outputs = outputs + (value_layer,) if output_values else outputs
 
         if self.is_decoder:
