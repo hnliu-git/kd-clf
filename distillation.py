@@ -35,6 +35,9 @@ def get_args(yaml_path):
     parser.add_argument("--trn_dataset", default=None, type=str, required=True)
     parser.add_argument("--val_dataset", default=None, type=str, required=True)
 
+    # Adaptor configs
+    parser.add_argument('--adaptors', default=[], type=list)
+
     parser = ClfDataModule.add_model_specific_args(parser)
     parser = BaseDistiller.add_model_specific_args(parser)
 
@@ -94,10 +97,22 @@ if __name__ == '__main__':
     teacher = path_to_clf_model(args.teacher_model, args.num_classes)
     student = path_to_clf_model(args.student_model, args.num_classes)
 
+    str2adaptors = {
+        'LogitMSE': LogitMSE(args.temperature),
+        'LogitCE': LogitCE(args.temperature),
+        'AttnTinyBERT': AttnTinyBERT(),
+        'HidnTinyBERT': HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
+        'EmbdTinyBERT': EmbdTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
+        'AttnMiniLM': AttnMiniLM(),
+        'ValMiniLM': ValMiniLM(),
+        'AttnMiniLMMSE': AttnMiniLMMSE(),
+        'ValMiniLMMSE': ValMiniLMMSE(),
+        'HidnPKD': HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
+    }
+
     # Setup adaptors
     adaptors = torch.nn.ModuleList([
-        LogitCE(args.temperature),
-        HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
+       str2adaptors[name] for name in args.adaptors
     ])
 
     # Setup lightning

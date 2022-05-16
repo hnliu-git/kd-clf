@@ -11,6 +11,8 @@ data:
 distillation:
   epochs: 20
   learning_rate: 3e-5
+  adaptors:
+    - 'AttnTinyBERT'
 
 # Weight-and-bias config
 wandb:
