@@ -123,19 +123,19 @@ if __name__ == '__main__':
         adaptors,
     )
 
-    ckpt_callback = ModelCheckpoint(
-        dirpath=args.ckpt_path,
-        monitor='pred:nll',
-        filename="%s-%s-{epoch:02d}-{val_acc_s:.2f}"
-                 % (args.val_dataset, args.student_model.split('/')[-1]),
-    )
+    # ckpt_callback = ModelCheckpoint(
+    #     dirpath=args.ckpt_path,
+    #     monitor='val_acc',
+    #     filename="%s-%s-{epoch:02d}-{val_acc_s:.2f}"
+    #              % (args.val_dataset, args.student_model.split('/')[-1]),
+    # )
     trainer = Trainer(
         gpus=1,
         logger=wandb_logger,
-        plugins=[HgCkptIO()],
+        # plugins=[HgCkptIO()],
         max_epochs=args.epochs,
         callbacks=[
-            ckpt_callback,
+            # ckpt_callback,
             LearningRateMonitor(logging_interval='step'),
         ]
     )
