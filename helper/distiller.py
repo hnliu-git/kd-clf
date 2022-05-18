@@ -220,16 +220,6 @@ class PredDistiller(BaseDistiller):
     def __init__(self, teacher, student, args, adaptors):
         super().__init__(teacher, student, args, adaptors)
 
-        self.save_hyperparameters(args)
-
-        self.teacher = teacher
-        self.student = student
-        self.adaptors = adaptors
-
-        # Metrics
-        self.acc_s = torchmetrics.Accuracy(num_classes=args.num_classes)
-        self.f1_s = torchmetrics.F1Score(num_classes=args.num_classes)
-
     def configure_optimizers(self):
         no_decay = ["bias", "LayerNorm.weight"]
 
