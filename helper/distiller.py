@@ -143,11 +143,6 @@ class BaseDistiller(LightningModule):
         if loss_dict['pred:nll'] == 0:
             loss_dict.pop('pred:nll')
             loss_dict.pop('nll_loss_teacher')
-        elif self.global_step < int(self.hparams.num_training_steps / 3):
-            # Temp pop prediction layer losses
-            loss_dict.pop('pred:nll')
-            if 'logit:ce' in loss_dict: loss_dict.pop('logit:ce')
-            if 'logit:mse' in loss_dict: loss_dict.pop('logit:mse')
         else:
             # Flooding
             loss_dict['pred:nll'] = torch.abs(loss_dict['pred:nll'] - self.hparams.flood) + self.hparams.flood
@@ -189,3 +184,76 @@ class BaseDistiller(LightningModule):
             For the customed CheckpointIO
         """
         checkpoint['student'] = self.student
+
+
+class InterDistiller(BaseDistiller):
+
+    def __init__(self, teacher, student, args, adaptors):
+        super().__init__(teacher, student, args, adaptors)
+
+    def training_step(self, batch, idx):
+        loss_dict = self.compute_loss(
+            *self(batch),
+            batch.get('attention_mask')
+        )
+
+        if loss_dict['pred:nll'] == 0:
+            loss_dict.pop('pred:nll')
+            loss_dict.pop('nll_loss_teacher')
+        elif 'pred:nll' in loss_dict:
+            loss_dict.pop('pred:nll')
+
+        for k, v in loss_dict.items():
+            self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+
+        if 'nll_loss_teacher' in loss_dict:
+            loss_dict.pop('nll_loss_teacher')
+
+        return sum(loss_dict.values())
+
+
+class PredDistiller(BaseDistiller):
+    """
+    Distiller for prediction layre
+    """
+
+    def __init__(self, teacher, student, args, adaptors):
+        super().__init__(teacher, student, args, adaptors)
+
+        self.save_hyperparameters(args)
+
+        self.teacher = teacher
+        self.student = student
+        self.adaptors = adaptors
+
+        # Metrics
+        self.acc_s = torchmetrics.Accuracy(num_classes=args.num_classes)
+        self.f1_s = torchmetrics.F1Score(num_classes=args.num_classes)
+
+    def configure_optimizers(self):
+        no_decay = ["bias", "LayerNorm.weight"]
+
+        parameters = [(n, p) for n, p in self.named_parameters() if 'classifier' in n]
+
+        optimizer_grouped_parameters = [
+            {
+                "params": [p for n, p in parameters if not any(nd in n for nd in no_decay)],
+                "weight_decay": self.hparams.weight_decay,
+            },
+            {
+                "params": [p for n, p in parameters if any(nd in n for nd in no_decay)],
+                "weight_decay": 0.0,
+            },
+        ]
+
+        optimizer = torch.optim.AdamW(optimizer_grouped_parameters,
+                                      lr=self.hparams.learning_rate,
+                                      eps=self.hparams.eps, )
+
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer,
+            num_training_steps=self.hparams.num_training_steps,
+            num_warmup_steps=self.hparams.num_warmup_steps
+        )
+
+        return [optimizer], [{"scheduler": scheduler, "interval": "step"}]

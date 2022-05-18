@@ -59,12 +59,13 @@ class LogitCE(nn.Module):
 
 class AttnTinyBERT(nn.Module):
 
-    def __init__(self, name='attentions:mse', w=1, log_interval=10000):
+    def __init__(self, name='attentions:mse', w=1, log_interval=10000, plot=True):
         super().__init__()
         self.w = w
         self.name = name
         self.log_interval = log_interval
         self.cot = 0
+        self.plot = plot
 
     def __call__(self, attn_t, attn_s, mask=None):
         '''
@@ -82,7 +83,7 @@ class AttnTinyBERT(nn.Module):
         attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
         attn_s = torch.where(attn_s <= -1e-3, torch.zeros_like(attn_s), attn_s)
 
-        if self.cot % self.log_interval == 0:
+        if self.cot % self.log_interval == 0 and self.plot:
             first_zero_index = 0
             for index, item in enumerate(mask[0]):
                 if item == 0:

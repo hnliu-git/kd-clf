@@ -9,14 +9,14 @@ data:
 # Distillation configs
 
 distillation:
-  epochs: 20
+  epochs: 8
   learning_rate: 3e-5
   adaptors:
     - 'AttnTinyBERT'
 
 # Weight-and-bias config
 wandb:
-  project: kd_final
+  project: attention_loss_explore
   exp: test
 
 
