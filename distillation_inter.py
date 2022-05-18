@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
     # Setup adaptors
     adaptors = torch.nn.ModuleList([
-       AttnTinyBERT(w=10),
+       AttnTinyBERT(w=10, plot=False),
     ])
 
     # Setup lightning
@@ -120,35 +120,27 @@ if __name__ == '__main__':
         adaptors,
     )
 
+    logger = WandbLogger(project=args.project, name=args.exp)
+
+    ckpt_callback = ModelCheckpoint(
+        dirpath=args.ckpt_path,
+        monitor='attentions:mse',
+        save_last=True,
+        filename="%s-%s-{epoch:02d}"
+                 % (args.val_dataset, args.student_model.split('/')[-1]),
+    )
+
     trainer = Trainer(
         gpus=1,
-        max_epochs=6,
+        logger=logger,
+        plugins=[HgCkptIO()],
+        max_epochs=1,
+        callbacks=[
+            ckpt_callback,
+            LearningRateMonitor(logging_interval='step'),
+        ]
     )
 
     trainer.fit(distiller, dm)
 
-    adaptors = torch.nn.ModuleList(
-        [
-            LogitMSE(),
-        ]
-    )
-
-    distiller2 = PredDistiller(
-        teacher,
-        distiller.student,
-        args,
-        adaptors,
-    )
-
-    logger = WandbLogger(project=args.project, name=args.exp)
-    trainer2 = Trainer(
-        gpus=1,
-        logger=logger,
-        max_epochs=args.epochs,
-        callbacks=[
-            LearningRateMonitor(logging_interval='step'),
-        ]
-    )
-    dm = ClfDataModule(get_dataset_obj(args), args)
-    trainer2.fit(distiller2, dm)
 
