@@ -123,9 +123,6 @@ if __name__ == '__main__':
     trainer = Trainer(
         gpus=1,
         max_epochs=6,
-        callbacks=[
-            LearningRateMonitor(logging_interval='step'),
-        ]
     )
 
     trainer.fit(distiller, dm)
