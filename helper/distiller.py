@@ -8,6 +8,7 @@ from transformers import get_linear_schedule_with_warmup
 from pytorch_lightning.utilities.cloud_io import get_filesystem
 
 import os
+import wandb
 import torch
 import torchmetrics
 
@@ -53,6 +54,7 @@ class BaseDistiller(LightningModule):
         parser.add_argument("--learning_rate", default=1e-4, type=float)
         parser.add_argument("--eps", default=1e-8, type=float)
         parser.add_argument("--num_classes", default=2, type=int)
+        parser.add_argument("--plot_attentions", default=True, type=bool)
 
         # Distillation Configurations
         parser.add_argument("--temperature", default=4, type=float)
@@ -157,11 +159,35 @@ class BaseDistiller(LightningModule):
 
     def validation_step(self, batch, idx):
         labels = batch['labels']
-        _, out_s = self(batch)
+        out_t, out_s = self(batch)
         pred_s = torch.argmax(out_s.logits, dim=1)
 
         self.f1_s(pred_s, labels)
         self.acc_s(pred_s, labels)
+
+        if self.hparams.plot_attentions and idx == 0:
+            attn_t = out_t.attentions
+            attn_s = out_s.attentions
+            mask = batch['attention_mask']
+
+            first_zero_index = 0
+            for index, item in enumerate(mask[0]):
+                if item == 0:
+                    first_zero_index = index
+                    break
+
+            # Unmasked text
+            axis = [i for i in range(first_zero_index)]
+
+            wandb.log({'%d-attn_t[-1]' % self.current_epoch: wandb.plots.HeatMap(axis, axis,
+                                                                                 attn_t[-1][0, 0, :, :]
+                                                                                 .detach().cpu(),
+                                                                                 show_text=False)})
+
+            wandb.log({'%d-attn_s[-1]' % self.current_epoch: wandb.plots.HeatMap(axis, axis,
+                                                                                 attn_s[-1][0, 0, :, :]
+                                                                                 .detach().cpu(),
+                                                                                 show_text=False)})
 
         return {'val_loss': out_s.loss}
 

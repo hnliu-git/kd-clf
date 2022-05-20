@@ -60,12 +60,10 @@ class LogitCE(nn.Module):
 
 class AttnTinyBERT(nn.Module):
 
-    def __init__(self, name='attentions:mse', w=1, log_interval=10000):
+    def __init__(self, name='attentions:mse', w=1):
         super().__init__()
         self.w = w
         self.name = name
-        self.log_interval = log_interval
-        self.cot = 0
 
     def __call__(self, attn_t, attn_s, mask=None):
         '''
@@ -86,22 +84,6 @@ class AttnTinyBERT(nn.Module):
         if mask is None:
             loss = F.mse_loss(attn_s, attn_t)
         else:
-            if self.cot % self.log_interval == 0:
-                first_zero_index = 0
-                for index, item in enumerate(mask[0]):
-                    if item == 0:
-                        first_zero_index = index
-                        break
-
-                axis = [i for i in range(first_zero_index)]
-                wandb.log({'%d-attn_t[0]' % int(self.cot / self.log_interval): wandb.plots.HeatMap(axis, axis,
-                                                                                                   attn_t[0, 0, :,
-                                                                                                   :].detach().cpu(),
-                                                                                                   show_text=False)})
-                wandb.log({'%d-attn_s[0]' % int(self.cot / self.log_interval): wandb.plots.HeatMap(axis, axis,
-                                                                                                   attn_s[0, 0, :,
-                                                                                                   :].detach().cpu(),
-                                                                                                   show_text=False)})
             mask = torch.cat([mask for _ in range(s_len)])
             mask = mask.to(attn_s).unsqueeze(1).expand(-1, attn_s.size(1), -1)  # (bs, num_of_heads, len)
             valid_count = torch.pow(mask.sum(dim=2), 2).sum()
@@ -111,7 +93,6 @@ class AttnTinyBERT(nn.Module):
 
             loss = F.mse_loss(attn_s_masked, attn_t_masked, reduction='none').sum() / valid_count
 
-        self.cot += 1
         return loss
 
 
@@ -165,12 +146,10 @@ class EmbdTinyBERT(nn.Module):
 
 class AttnMiniLM(nn.Module):
 
-    def __init__(self, name='attentions:ce', w=1, log_interval=10000):
+    def __init__(self, name='attentions:ce', w=1):
         super().__init__()
         self.w = w
         self.name = name
-        self.cot = 0
-        self.log_interval = log_interval
 
     def __call__(self, attn_t, attn_s, mask=None):
         '''
@@ -188,22 +167,6 @@ class AttnMiniLM(nn.Module):
             attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
             loss = -((attn_t * F.log_softmax(attn_s, dim=-1)).sum(dim=-1)).mean()
         else:
-            if self.cot % self.log_interval == 0:
-                first_zero_index = 0
-                for index, item in enumerate(mask[0]):
-                    if item == 0:
-                        first_zero_index = index
-                        break
-
-                axis = [i for i in range(first_zero_index)]
-                wandb.log({'%d-attn_t[0]' % int(self.cot / self.log_interval): wandb.plots.HeatMap(axis, axis,
-                                                                                                   attn_t[0, 0, :,
-                                                                                                   :].detach().cpu(),
-                                                                                                   show_text=False)})
-                wandb.log({'%d-attn_s[0]' % int(self.cot / self.log_interval): wandb.plots.HeatMap(axis, axis,
-                                                                                                   attn_s[0, 0, :,
-                                                                                                   :].detach().cpu(),
-                                                                                                   show_text=False)})
             mask = mask.to(attn_s).unsqueeze(1).expand(-1, attn_s.size(1), -1)  # (bs, num_of_heads, len)
             # Smooth as the masked feature is zero here
             attn_s = (attn_s + 1e-6) / (attn_s.sum() + attn_s.size(-1) * 1e-6)
@@ -254,11 +217,10 @@ class ValMiniLM(nn.Module):
 
 class AttnMiniLMMSE(nn.Module):
 
-    def __init__(self, name='attentions:mse', w=1, log_interval=10000):
+    def __init__(self, name='attentions:mse', w=1):
         super().__init__()
         self.w = w
         self.name = name
-        self.log_interval = log_interval
 
     def __call__(self, attn_t, attn_s, mask=None):
         '''
@@ -277,22 +239,6 @@ class AttnMiniLMMSE(nn.Module):
             attn_s = torch.where(attn_s <= -1e-3, torch.zeros_like(attn_s), attn_s)
             loss = F.mse_loss(attn_s, attn_t)
         else:
-            if self.cot % self.log_interval == 0:
-                first_zero_index = 0
-                for index, item in enumerate(mask[0]):
-                    if item == 0:
-                        first_zero_index = index
-                        break
-
-                axis = [i for i in range(first_zero_index)]
-                wandb.log({'%d-attn_t[0]' % int(self.cot / self.log_interval): wandb.plots.HeatMap(axis, axis,
-                                                                                                   attn_t[0, 0, :,
-                                                                                                   :].detach().cpu(),
-                                                                                                   show_text=False)})
-                wandb.log({'%d-attn_s[0]' % int(self.cot / self.log_interval): wandb.plots.HeatMap(axis, axis,
-                                                                                                   attn_s[0, 0, :,
-                                                                                                   :].detach().cpu(),
-                                                                                                   show_text=False)})
             mask = mask.to(attn_s).unsqueeze(1).expand(-1, attn_s.size(1), -1)  # (bs, num_of_heads, len)
             valid_count = torch.pow(mask.sum(dim=2), 2).sum()
 
