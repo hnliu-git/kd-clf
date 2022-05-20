@@ -103,9 +103,9 @@ if __name__ == '__main__':
         'AttnTinyBERT': AttnTinyBERT(w=10, log_interval=int(args.num_training_steps / args.epochs)),
         'HidnTinyBERT': HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'EmbdTinyBERT': EmbdTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
-        'AttnMiniLM': AttnMiniLM(),
+        'AttnMiniLM': AttnMiniLM(log_interval=int(args.num_training_steps / args.epochs)),
         'ValMiniLM': ValMiniLM(),
-        'AttnMiniLMMSE': AttnMiniLMMSE(),
+        'AttnMiniLMMSE': AttnMiniLMMSE(log_interval=int(args.num_training_steps / args.epochs)),
         'ValMiniLMMSE': ValMiniLMMSE(),
         'HidnPKD': HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
     }
