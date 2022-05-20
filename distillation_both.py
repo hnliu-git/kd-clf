@@ -3,14 +3,14 @@ import pytorch_lightning as pl
 
 from helper.adpator import *
 from data.data_module import ClfDataModule
-from helper.distiller import BaseDistiller, HgCkptIO
+from helper.distiller import BaseDistiller
 
 from utils import serialize_config, path_to_clf_model
 from datasets import load_dataset
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.callbacks import LearningRateMonitor
 
 
 def get_args(yaml_path):
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     str2adaptors = {
         'LogitMSE': LogitMSE(args.temperature),
         'LogitCE': LogitCE(args.temperature),
-        'AttnTinyBERT': AttnTinyBERT(),
+        'AttnTinyBERT': AttnTinyBERT(w=10, log_interval=int(args.num_training_step / args.epochs)),
         'HidnTinyBERT': HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'EmbdTinyBERT': EmbdTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'AttnMiniLM': AttnMiniLM(),
@@ -123,19 +123,11 @@ if __name__ == '__main__':
         adaptors,
     )
 
-    # ckpt_callback = ModelCheckpoint(
-    #     dirpath=args.ckpt_path,
-    #     monitor='val_acc',
-    #     filename="%s-%s-{epoch:02d}-{val_acc_s:.2f}"
-    #              % (args.val_dataset, args.student_model.split('/')[-1]),
-    # )
     trainer = Trainer(
         gpus=1,
         logger=wandb_logger,
-        # plugins=[HgCkptIO()],
         max_epochs=args.epochs,
         callbacks=[
-            # ckpt_callback,
             LearningRateMonitor(logging_interval='step'),
         ]
     )

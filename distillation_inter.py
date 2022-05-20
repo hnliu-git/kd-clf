@@ -95,9 +95,7 @@ if __name__ == '__main__':
     student = path_to_clf_model(args.student_model, args.num_classes)
 
     str2adaptors = {
-        'LogitMSE': LogitMSE(args.temperature),
-        'LogitCE': LogitCE(args.temperature),
-        'AttnTinyBERT': AttnTinyBERT(),
+        'AttnTinyBERT': AttnTinyBERT(w=10, log_interval=int(args.num_training_step / args.epochs)),
         'HidnTinyBERT': HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'EmbdTinyBERT': EmbdTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'AttnMiniLM': AttnMiniLM(),
@@ -109,7 +107,7 @@ if __name__ == '__main__':
 
     # Setup adaptors
     adaptors = torch.nn.ModuleList([
-       AttnTinyBERT(w=10, plot=False),
+        str2adaptors[name] for name in args.adaptors if name in str2adaptors
     ])
 
     # Setup lightning
@@ -126,7 +124,7 @@ if __name__ == '__main__':
         dirpath=args.ckpt_path,
         monitor='attentions:mse',
         save_last=True,
-        filename="%s-%s-{epoch:02d}"
+        filename="1st-%s-%s"
                  % (args.val_dataset, args.student_model.split('/')[-1]),
     )
 
@@ -134,7 +132,7 @@ if __name__ == '__main__':
         gpus=1,
         logger=logger,
         plugins=[HgCkptIO()],
-        max_epochs=1,
+        max_epochs=args.epochs,
         callbacks=[
             ckpt_callback,
             LearningRateMonitor(logging_interval='step'),
@@ -142,5 +140,4 @@ if __name__ == '__main__':
     )
 
     trainer.fit(distiller, dm)
-
 

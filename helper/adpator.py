@@ -6,6 +6,7 @@ from torch import nn
 import torch.nn.functional as F
 import wandb
 
+
 class LogitMSE(nn.Module):
 
     def __init__(self, temperature=4.0, name='logits:mse', w=1):
