@@ -106,7 +106,7 @@ class HidnTinyBERT(nn.Module):
 
     def __call__(self, hidn_t, hidn_s, mask=None):
         s_len = len(hidn_s)
-        hidn_t = torch.cat((hidn_t[0],) + hidn_t[-s_len+1:])
+        hidn_t = torch.cat(hidn_t[-s_len:])
         hidn_s = torch.cat(hidn_s)
         hidn_s = self.linear(hidn_s)
 
