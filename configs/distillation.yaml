@@ -12,7 +12,8 @@ distillation:
   epochs: 10
   learning_rate: 3e-5
   adaptors:
-    - 'AttnTinyBERT'
+    - 'AttnMiniLM'
+    - 'ValMiniLM'
 
 # Weight-and-bias config
 wandb:

@@ -162,6 +162,7 @@ class AttnMiniLM(nn.Module):
         '''
         attn_t = torch.cat(attn_t[-1:])
         attn_s = torch.cat(attn_s[-1:])
+        num_heads = attn_t.size(1)
 
         if mask is None:
             attn_t = torch.where(attn_t <= -1e-3, torch.zeros_like(attn_t), attn_t)
@@ -169,11 +170,20 @@ class AttnMiniLM(nn.Module):
         else:
             mask = mask.to(attn_s).unsqueeze(1).expand(-1, attn_s.size(1), -1)  # (bs, num_of_heads, len)
             # Smooth as the masked feature is zero here
-            attn_s = (attn_s + 1e-6) / (attn_s.sum() + attn_s.size(-1) * 1e-6)
-            attn_t = (attn_t + 1e-6) / (attn_t.sum() + attn_t.size(-1) * 1e-6)
-            # Attn_t and Attn_s are already applied softmax
-            loss = (-(attn_t * attn_s.log()) * mask.unsqueeze(-1) * mask.unsqueeze(2)).sum() / mask.sum()
+            attn_s = attn_s + (mask * 1e-6).unsqueeze(2)
+            attn_t = attn_t + (mask * 1e-6).unsqueeze(2)
 
+            attn_s = attn_s / attn_s.sum(dim=-1, keepdim=True)
+            attn_t = attn_t / attn_t.sum(dim=-1, keepdim=True)
+
+            attn_t += ((1 - mask) * 1e-6).unsqueeze(2)
+            attn_s += ((1 - mask) * 1e-6).unsqueeze(2)
+
+            # Attn_t and Attn_s are already applied softmax
+            kld_loss = F.kl_div(attn_s.log(), attn_t, reduction='none')
+            loss = (kld_loss * mask.unsqueeze(-1) * mask.unsqueeze(2)).sum() / (mask.sum()*num_heads)
+            # loss = (-(attn_t * attn_s.log()) * mask.unsqueeze(-1) * mask.unsqueeze(
+            #     2)).sum() / (mask.sum()*num_heads)
         return loss
 
 
@@ -202,15 +212,30 @@ class ValMiniLM(nn.Module):
             loss = -((prob_t * F.log_softmax(reln_s, dim=-1)).sum(dim=-1)).mean()
         else:
             mask = torch.cat([mask for _ in range(head)]).to(val_t)
+            mask_reversed = (1.0 - mask) * -10000.0
 
             val_t = val_t.reshape(batch * head, seq, t_dim)
             val_s = val_s.reshape(batch * head, seq, s_dim)
 
-            reln_t = torch.bmm(val_t, val_t.transpose(1, 2)) / math.sqrt(t_dim)
-            reln_s = torch.bmm(val_s, val_s.transpose(1, 2)) / math.sqrt(s_dim)
+            reln_t = (torch.bmm(val_t, val_t.transpose(1, 2)) / math.sqrt(t_dim)) + mask_reversed.unsqueeze(1)
+            reln_s = (torch.bmm(val_s, val_s.transpose(1, 2)) / math.sqrt(s_dim)) + mask_reversed.unsqueeze(1)
 
-            prob_t = F.softmax(reln_t, dim=-1)
-            loss = -((prob_t * F.log_softmax(reln_s, dim=-1) * mask.unsqueeze(1)).sum(dim=-1)*mask).sum() / mask.sum()
+            reln_t = F.softmax(reln_t, dim=-1)
+            reln_s = F.softmax(reln_s, dim=-1)
+
+            # Smooth as the masked feature is zero here
+            reln_s = reln_s + (mask * 1e-6).unsqueeze(2)
+            reln_t = reln_t + (mask * 1e-6).unsqueeze(2)
+
+            reln_s = reln_s / reln_s.sum(dim=-1, keepdim=True)
+            reln_t = reln_t / reln_t.sum(dim=-1, keepdim=True)
+
+            reln_t += ((1 - mask) * 1e-6).unsqueeze(2)
+            reln_s += ((1 - mask) * 1e-6).unsqueeze(2)
+
+            kld_loss = F.kl_div(reln_s.log(), reln_t, reduction='none')
+            loss = (kld_loss * mask.unsqueeze(1) * mask.unsqueeze(2)).sum() / mask.sum()
+            # loss = -((prob_t * F.log_softmax(reln_s, dim=-1) * mask.unsqueeze(1)).sum(dim=-1)*mask).sum() / mask.sum()
 
         return loss
 
