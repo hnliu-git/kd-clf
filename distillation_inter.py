@@ -95,13 +95,11 @@ if __name__ == '__main__':
     student = path_to_clf_model(args.student_model, args.num_classes)
 
     str2adaptors = {
-        'AttnTinyBERT': AttnTinyBERT(w=10),
+        'AttnTinyBERT': AttnTinyBERT(),
         'HidnTinyBERT': HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'EmbdTinyBERT': EmbdTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'AttnMiniLM': AttnMiniLM(),
         'ValMiniLM': ValMiniLM(),
-        'AttnMiniLMMSE': AttnMiniLMMSE(),
-        'ValMiniLMMSE': ValMiniLMMSE(),
         'HidnPKD': HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
     }
 

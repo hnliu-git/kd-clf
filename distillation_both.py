@@ -100,13 +100,11 @@ if __name__ == '__main__':
     str2adaptors = {
         'LogitMSE': LogitMSE(args.temperature),
         'LogitCE': LogitCE(args.temperature),
-        'AttnTinyBERT': AttnTinyBERT(w=10),
+        'AttnTinyBERT': AttnTinyBERT(),
         'HidnTinyBERT': HidnTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'EmbdTinyBERT': EmbdTinyBERT(teacher.config.hidden_size, student.config.hidden_size),
         'AttnMiniLM': AttnMiniLM(),
         'ValMiniLM': ValMiniLM(),
-        'AttnMiniLMMSE': AttnMiniLMMSE(),
-        'ValMiniLMMSE': ValMiniLMMSE(),
         'HidnPKD': HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
     }
 
