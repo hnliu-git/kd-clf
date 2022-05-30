@@ -76,9 +76,6 @@ def get_dataset_obj(args):
 
     return dataset
 
-from transformers.models.bert import modeling_bert, configuration_bert
-from transformers import modeling_outputs
-
 
 if __name__ == '__main__':
     import os

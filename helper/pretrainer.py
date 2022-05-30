@@ -62,15 +62,6 @@ class Pretrainer(LightningModule):
         self.model = model
 
     def forward(self, batch):
-        """
-        :param
-            batch: {
-                    sentence: dict from tokenizers
-                    label: Tensor [bsz]
-                   }
-        :return:
-            out: SequenceClassfierOutput with keys [loss, logits]
-        """
         return self.model(**batch)
 
     def configure_optimizers(self):

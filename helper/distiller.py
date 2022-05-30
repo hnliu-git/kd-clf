@@ -1,3 +1,11 @@
+"""
+Distillers for knowledge distillation on different layers
+"""
+
+import os
+import wandb
+import torch
+import torchmetrics
 
 from argparse import ArgumentParser
 from typing import Any, Dict, Optional
@@ -6,11 +14,6 @@ from pytorch_lightning.plugins import CheckpointIO
 from pytorch_lightning.utilities.types import _PATH
 from transformers import get_linear_schedule_with_warmup
 from pytorch_lightning.utilities.cloud_io import get_filesystem
-
-import os
-import wandb
-import torch
-import torchmetrics
 
 
 class HgCkptIO(CheckpointIO):
@@ -42,7 +45,11 @@ class HgCkptIO(CheckpointIO):
 
 
 class BaseDistiller(LightningModule):
-
+    """
+    ====================================
+        A distiller for all layers
+    ====================================
+    """
     @staticmethod
     def add_model_specific_args(parent_parser):
         """"""
@@ -90,16 +97,6 @@ class BaseDistiller(LightningModule):
         return loss_dict
 
     def forward(self, batch):
-        """
-        :param
-            batch: {
-                    sentence: dict from tokenizers
-                    label: Tensor [bsz]
-                   }
-        :return:
-            teacher_out: SequenceClassfierOutput with keys [logits]
-            student_out: SequenceClassfierOutput with keys [loss, logits]
-        """
         self.teacher.eval()
         with torch.no_grad():
             teacher_out = self.teacher(**batch)
@@ -142,15 +139,15 @@ class BaseDistiller(LightningModule):
             batch.get('attention_mask')
         )
 
+        for k, v in loss_dict.items():
+            self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)
+
         if loss_dict['pred:nll'] == 0:
             loss_dict.pop('pred:nll')
             loss_dict.pop('nll_loss_teacher')
         # else:
-        #     Flooding
+            # Flooding: method to avoid over-fit, check https://arxiv.org/pdf/2002.08709.pdf
             # loss_dict['pred:nll'] = torch.abs(loss_dict['pred:nll'] - self.hparams.flood) + self.hparams.flood
-
-        for k, v in loss_dict.items():
-            self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
         if 'nll_loss_teacher' in loss_dict:
             loss_dict.pop('nll_loss_teacher')
@@ -165,6 +162,7 @@ class BaseDistiller(LightningModule):
         self.f1_s(pred_s, labels)
         self.acc_s(pred_s, labels)
 
+        # Plot attention matrices of the first item in the first batch
         if self.hparams.plot_attentions and idx == 0:
             attn_t = out_t.attentions
             attn_s = out_s.attentions
@@ -213,24 +211,30 @@ class BaseDistiller(LightningModule):
 
 
 class InterDistiller(BaseDistiller):
-
+    """
+        A distiller for inter layer
+        Archived by removing pred layer losses
+    """
     def __init__(self, teacher, student, args, adaptors):
         super().__init__(teacher, student, args, adaptors)
 
     def training_step(self, batch, idx):
+        '''
+            Rewrite training_step and remove prediction layer losses
+        '''
         loss_dict = self.compute_loss(
             *self(batch),
             batch.get('attention_mask')
         )
+
+        for k, v in loss_dict.items():
+            self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
         if loss_dict['pred:nll'] == 0:
             loss_dict.pop('pred:nll')
             loss_dict.pop('nll_loss_teacher')
         elif 'pred:nll' in loss_dict:
             loss_dict.pop('pred:nll')
-
-        for k, v in loss_dict.items():
-            self.log(k, v, on_step=True, on_epoch=False, prog_bar=True, logger=True)
 
         if 'nll_loss_teacher' in loss_dict:
             loss_dict.pop('nll_loss_teacher')
@@ -240,13 +244,15 @@ class InterDistiller(BaseDistiller):
 
 class PredDistiller(BaseDistiller):
     """
-    Distiller for prediction layre
+        A distiller for pred layer
+        Archived by fixing inter layer weights
     """
 
     def __init__(self, teacher, student, args, adaptors):
         super().__init__(teacher, student, args, adaptors)
 
     def configure_optimizers(self):
+
         no_decay = ["bias", "LayerNorm.weight"]
 
         parameters = [(n, p) for n, p in self.named_parameters() if 'classifier' in n]

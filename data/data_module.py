@@ -1,8 +1,7 @@
 '''
-Data module for classification task, require a dataset object as input
-Author: Haonan Liu
-Last Modified: 09.02.2022
+Data module for pretraining and classification task, require a dataset object as input
 '''
+
 import torch
 
 from typing import Optional
@@ -33,7 +32,7 @@ class PtrDataModule(LightningDataModule):
 
     def __init__(self, dataset, args):
         '''
-        :param dataset:  A dataset object containing keys ['train', 'validation'],
+        :param dataset:  A dataset object,
                          see https://huggingface.co/docs/datasets/access.html
         '''
         super(PtrDataModule, self).__init__()
@@ -152,7 +151,7 @@ class ClfDataModule(LightningDataModule):
             batch_dict['attention_mask'].append(torch.LongTensor(item['attention_mask']))
             if has_label: batch_dict['labels'].append(torch.LongTensor([item['label']]))
 
-        batch_dict = {k:torch.stack(v, dim=0) for k, v in batch_dict.items()}
+        batch_dict = {k: torch.stack(v, dim=0) for k, v in batch_dict.items()}
 
         if has_label:
             batch_dict['labels'] = torch.squeeze(batch_dict['labels'])

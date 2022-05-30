@@ -73,9 +73,9 @@ if __name__ == '__main__':
     )
 
     with torch.no_grad():
-                             model = BertForSequenceClassification(config).to(device)
-                             baseline = inference_time_test(model)
-                             print("Inference time in secs: ", baseline)
+         model = BertForSequenceClassification(config).to(device)
+         baseline = inference_time_test(model)
+         print("Inference time in secs: ", baseline)
 
     del model
     torch.cuda.empty_cache()

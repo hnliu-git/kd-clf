@@ -1,6 +1,3 @@
-import transformers
-import yaml
-
 from utils import *
 
 from datasets import load_dataset, load_from_disk
@@ -9,7 +6,7 @@ from pytorch_lightning import Trainer
 from helper.pretrainer import Pretrainer, HgCkptIO
 from data.data_module import PtrDataModule
 from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 
 def get_args(yaml_path):
@@ -107,6 +104,3 @@ if __name__ == '__main__':
     )
 
     trainer.fit(pretrainer, dm)
-
-    # fill = pipeline('fill-mask', model='filiberto', tokenizer='filiberto')
-    # fill(f'ciao {fill.tokenizer.mask_token} va?')

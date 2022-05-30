@@ -8,7 +8,7 @@ from pytorch_lightning import Trainer
 from data.data_module import ClfDataModule
 from pytorch_lightning.loggers import WandbLogger
 from helper.finetuner import ClfFinetune, HgCkptIO
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+from pytorch_lightning.callbacks import ModelCheckpoint
 
 
 def get_args(yaml_path):
@@ -72,10 +72,10 @@ if __name__ == '__main__':
 
     trainer = Trainer(
         gpus=1,
-        # plugins=[HgCkptIO()],
+        plugins=[HgCkptIO()],
         max_epochs=args.epochs,
         logger=wandb_logger,
-        # callbacks=[ckpt_callback]
+        callbacks=[ckpt_callback]
     )
 
     trainer.fit(fintuner, dm)

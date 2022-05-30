@@ -66,15 +66,6 @@ class ClfFinetune(LightningModule):
         self.f1 = torchmetrics.F1Score(num_classes=self.hparams.num_classes)
 
     def forward(self, batch):
-        """
-        :param
-            batch: {
-                    sentence: dict from tokenizers
-                    label: Tensor [bsz]
-                   }
-        :return:
-            out: SequenceClassfierOutput with keys [loss, logits]
-        """
         return self.model(**batch)
 
     def configure_optimizers(self):
@@ -127,6 +118,6 @@ class ClfFinetune(LightningModule):
 
     def on_save_checkpoint(self, checkpoint) -> None:
         """
-            For the customed CheckpointIO
+            For the customized CheckpointIO
         """
         checkpoint['hg_model'] = self.model
