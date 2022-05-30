@@ -1,7 +1,7 @@
 import yaml
 import pytorch_lightning as pl
 
-from helper.adpator import *
+from helper.adaptor import *
 from data.data_module import ClfDataModule
 from helper.distiller import *
 
