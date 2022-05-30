@@ -32,8 +32,8 @@ distillation:
 wandb:
   project: test
   exp: test
-teacher_model:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22
-student_model: ckpts/bert_H192_L4_A12-epoch=19-perplexity=14.60
+teacher_model:  ckpts/<path-to-finetuned-teacher>
+student_model: <path-to-pretrained-student>/<link-to-huggingface-model>
 ckpt_path: ckpts/
 ```
 #### Run the scripts
