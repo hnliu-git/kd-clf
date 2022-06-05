@@ -4,15 +4,11 @@
       "filename": "dataset.arrow"
     }
   ],
-  "_fingerprint": "485b0f262b4f177c",
-  "_format_columns": [
-    "idx",
-    "label",
-    "text"
-  ],
+  "_fingerprint": "b0174e892ed686ea",
+  "_format_columns": null,
   "_format_kwargs": {},
   "_format_type": null,
   "_indexes": {},
   "_output_all_columns": false,
-  "_split": null
+  "_split": "validation"
 }

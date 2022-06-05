@@ -31,7 +31,7 @@ class LogitMSE(BaseAdaptor):
         super().__init__(name, w)
         self.temp = temperature
 
-    def __call__(self, logits_t, logits_s):
+    def __call__(self, logits_t, logits_s, mask=None):
         '''
         Calculate the mse loss between logits_s and logits_t
 
@@ -54,7 +54,7 @@ class LogitCE(BaseAdaptor):
         super().__init__(name, w)
         self.temp = temperature
 
-    def __call__(self, logits_t, logits_s):
+    def __call__(self, logits_t, logits_s, mask=None):
         '''
         Calculate the mse loss between logits_s and logits_t
 
