@@ -1,4 +1,5 @@
 import yaml
+import datasets
 import pytorch_lightning as pl
 
 from helper.adaptor import *
@@ -6,7 +7,6 @@ from data.data_module import ClfDataModule
 from helper.distiller import *
 
 from utils import serialize_config, path_to_clf_model
-from datasets import load_dataset
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
@@ -48,19 +48,20 @@ def get_args(yaml_path):
 
 
 def get_dataset_obj(args):
-    sst2 = load_dataset('glue', 'sst2').rename_column('sentence', 'text')
-    tweet = load_dataset('tweet_eval', 'sentiment')
+    sst2 = datasets.load_from_disk('data/sst2')
+    tweet = datasets.load_from_disk('data/tweet')
 
     if args.trn_dataset == 'sst2':
         train = sst2['train']
     elif args.trn_dataset == 'tweet':
         train = tweet['train']
     elif args.trn_dataset == 'sst2-tweet':
-        from datasets import concatenate_datasets
-        train = concatenate_datasets([
+        train = datasets.concatenate_datasets([
             sst2.remove_columns(['label', 'idx'])['train'],
             tweet.remove_columns(['label'])['train']
         ])
+    else:
+        train = datasets.load_dataset(args.trn_dataset)['train']
 
     if args.val_dataset == 'sst2':
         args.num_classes = 2
