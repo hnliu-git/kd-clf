@@ -68,7 +68,7 @@ def get_dataset_obj(args):
         sst2['train'] = train
         dataset = sst2
     elif args.val_dataset == 'tweet':
-        args.num_clases = 3
+        args.num_classes = 3
         tweet['train'] = train
         dataset = tweet
 
