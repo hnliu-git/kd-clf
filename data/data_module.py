@@ -214,7 +214,7 @@ class ClfDataModule(LightningDataModule):
         self.test_loader = DataLoader(
             self.test,
             batch_size=self.hparams.batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
             collate_fn=self.collate_fn_def,

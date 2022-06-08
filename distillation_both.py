@@ -129,3 +129,12 @@ if __name__ == '__main__':
     )
 
     trainer.fit(distiller, dm)
+
+    if args.val_dataset == 'tweet':
+        trainer.test(distiller, dm)
+    elif args.val_dataset == 'sst2':
+        preds = trainer.predict(distiller, dataloaders=dm.test_dataloader())
+        preds = [i for batch in preds for i in batch.numpy().tolist()]
+        with open(f'data/{args.exp}-sst2.txt', 'w') as wf:
+            for pred in preds:
+                wf.write(f'{pred}\n')

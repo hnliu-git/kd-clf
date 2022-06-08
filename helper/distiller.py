@@ -82,6 +82,9 @@ class BaseDistiller(LightningModule):
         self.acc_s = torchmetrics.Accuracy(num_classes=args.num_classes)
         self.f1_s = torchmetrics.F1Score(num_classes=args.num_classes)
 
+        self.test_acc = torchmetrics.Accuracy(num_classes=args.num_classes)
+        self.test_f1 = torchmetrics.F1Score(num_classes=args.num_classes)
+
     def compute_loss(self, out_t, out_s, mask=None):
         loss_dict = {
             'pred:nll': out_s.get('loss', 0),
@@ -194,8 +197,21 @@ class BaseDistiller(LightningModule):
         _, out_s = self(batch)
         pred_s = torch.argmax(out_s.logits, dim=1)
 
-        self.f1_s(pred_s, labels)
-        self.acc_s(pred_s, labels)
+        return {'test_acc': self.test_acc(pred_s, labels),
+                'test_f1': self.test_f1(pred_s, labels)}
+
+    def test_epoch_end(self, outputs) -> None:
+        test_acc = torch.stack([x["test_acc"] for x in outputs]).mean()
+        test_f1 = torch.stack([x["test_f1"] for x in outputs]).mean()
+        self.log("test_acc", test_acc, prog_bar=True, logger=True)
+        self.log("test_f1", test_f1, prog_bar=True, logger=True)
+
+    def predict_step(self, batch, idx):
+        batch.pop('labels')
+        out_s = self.student(**batch)
+        pred_s = torch.argmax(out_s.logits, dim=1)
+
+        return pred_s
 
     def validation_epoch_end(self, outputs) -> None:
         val_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
