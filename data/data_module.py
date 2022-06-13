@@ -169,7 +169,7 @@ class ClfDataModule(LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(hparams.tokenizer)
 
     def setup(self, stage: Optional[str] = None) -> None:
-        column_names = self.dataset.column_names
+        column_names = self.dataset.column_names['train']
 
         for cn in column_names:
             if cn in ['text', 'content']:
