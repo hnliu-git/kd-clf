@@ -6,7 +6,7 @@ from helper.adaptor import *
 from data.data_module import ClfDataModule
 from helper.distiller import *
 
-from utils import serialize_config, path_to_clf_model
+from utils import *
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
@@ -47,37 +47,6 @@ def get_args(yaml_path):
     return args
 
 
-def get_dataset_obj(args):
-    sst2 = datasets.load_from_disk('data/sst2')
-    tweet = datasets.load_from_disk('data/tweet')
-
-    if args.trn_dataset == 'sst2':
-        train = sst2['train']
-    elif args.trn_dataset == 'tweet':
-        train = tweet['train']
-    elif args.trn_dataset == 'sst2-tweet':
-        train = datasets.concatenate_datasets([
-            sst2.remove_columns(['label', 'idx'])['train'],
-            tweet.remove_columns(['label'])['train']
-        ])
-    else:
-        train = datasets.load_dataset(args.trn_dataset)['train']
-
-    if args.val_dataset == 'sst2':
-        args.num_classes = 2
-        sst2['train'] = train
-        dataset = sst2
-    elif args.val_dataset == 'tweet':
-        args.num_classes = 3
-        tweet['train'] = train
-        dataset = tweet
-
-    args.num_training_steps = int(len(train)/args.batch_size) * args.epochs
-    args.num_warmup_steps = int(len(train)/args.batch_size) * min(1, int(0.1*args.epochs))
-
-    return dataset
-
-
 if __name__ == '__main__':
     import os
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -86,7 +55,7 @@ if __name__ == '__main__':
     args = get_args('configs/distillation.yaml')
 
     # Data Module
-    dm = ClfDataModule(get_dataset_obj(args), args)
+    dm = ClfDataModule(get_clf_dataset_obj(args), args)
 
     # Setup student and teacher
     teacher = path_to_clf_model(args.teacher_model, args.num_classes)
