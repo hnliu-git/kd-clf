@@ -169,7 +169,11 @@ class ClfDataModule(LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(hparams.tokenizer)
 
     def setup(self, stage: Optional[str] = None) -> None:
-        self.text_column = self.dataset.column_names['train'][0]
+        column_names = self.dataset.column_names
+
+        for cn in column_names:
+            if cn in ['text', 'content']:
+                self.text_column = cn
 
         self.train = self.dataset['train']
         self.val = self.dataset['validation']
@@ -202,7 +206,7 @@ class ClfDataModule(LightningDataModule):
     def val_dataloader(self):
         self.valid_loader = DataLoader(
             self.val,
-            batch_size=self.hparams.batch_size,
+            batch_size=32,
             shuffle=False,
             num_workers=self.hparams.num_workers,
             pin_memory=True,
