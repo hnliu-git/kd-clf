@@ -24,8 +24,10 @@ def get_clf_dataset_obj(args):
             tweet.remove_columns(['label'])['train']
         ])
     else:
-        train = datasets.load_dataset(args.trn_dataset)['train']
-        train.remove_columns(['label'])
+        train = datasets.concatenate_datasets([
+            datasets.load_dataset(args.trn_dataset)['train'].remove_columns(['label']),
+            eval(args.val_dataset)['train'].remove_columns('label')
+        ])
 
     if args.val_dataset == 'sst2':
         args.num_classes = 2

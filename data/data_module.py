@@ -169,25 +169,30 @@ class ClfDataModule(LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(hparams.tokenizer)
 
     def setup(self, stage: Optional[str] = None) -> None:
-        column_names = self.dataset.column_names['train']
+        train_col_names = self.dataset['train'].column_names
+        val_col_names = self.dataset['validation'].column_names
 
-        for cn in column_names:
+        for cn in train_col_names:
             if cn in ['text', 'content']:
-                self.text_column = cn
+                self.train_col = cn
+
+        for cn in val_col_names:
+            if cn in ['text', 'content']:
+                self.val_col = cn
 
         self.train = self.dataset['train']
         self.val = self.dataset['validation']
         self.test = self.dataset['test']
 
-        self.train = self.train.map(lambda e: self.tokenizer(e[self.text_column],
+        self.train = self.train.map(lambda e: self.tokenizer(e[self.train_col],
                                                                  truncation=True,
                                                                  padding='max_length',
                                                                  max_length=self.hparams.max_length))
-        self.val = self.val.map(lambda e: self.tokenizer(e[self.text_column],
+        self.val = self.val.map(lambda e: self.tokenizer(e[self.val_col],
                                                                  truncation=True,
                                                                  padding='max_length',
                                                                  max_length=self.hparams.max_length))
-        self.test = self.test.map(lambda e: self.tokenizer(e[self.text_column],
+        self.test = self.test.map(lambda e: self.tokenizer(e[self.val_col],
                                                                  truncation=True,
                                                                  padding='max_length',
                                                                  max_length=self.hparams.max_length))
