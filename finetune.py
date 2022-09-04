@@ -1,14 +1,15 @@
 import yaml
+from datasets import load_dataset
 import pytorch_lightning as pl
 
-from utils import serialize_config, path_to_clf_model
-from datasets import load_dataset
+from utils import *
 from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from data.data_module import ClfDataModule
 from pytorch_lightning.loggers import WandbLogger
 from helper.finetuner import ClfFinetune, HgCkptIO
 from pytorch_lightning.callbacks import ModelCheckpoint
+from transformers import AutoModelForSequenceClassification
 
 
 def get_args(yaml_path):
@@ -22,13 +23,23 @@ def get_args(yaml_path):
 
     # Dataset
     parser.add_argument('--dataset_name', type=str)
+    parser.add_argument("--batch_size", type=int, default=256,
+                        help="Batch size.")
+    parser.add_argument('--max_length', type=int, default=128,
+                        help='max sequence length')
+    parser.add_argument("--num_workers", type=int, default=8,
+                        help="Number of workers for data loading.")
 
     # Model
-    parser.add_argument("--model", default=None, required=True, type=str,
-                        help="name of the model")
+    parser.add_argument("--ckpt_path", default='ckpts', type=str)
 
-    parser = ClfDataModule.add_model_specific_args(parser)
-    parser = ClfFinetune.add_model_specific_args(parser)
+    # Training configs
+    parser.add_argument("--epochs", default=5, type=int)
+
+    # Optimizer configs
+    parser.add_argument("--learning_rate", default=1e-4, type=float)
+    parser.add_argument("--weight_decay", default=5e-5, type=float)
+    parser.add_argument("--eps", default=1e-8, type=float)
 
     config = yaml.load(open(yaml_path), Loader=yaml.FullLoader)
     args = parser.parse_args(serialize_config(config))
@@ -36,19 +47,13 @@ def get_args(yaml_path):
     return args
 
 
-def get_dataset_obj(args):
+def get_model(name, num_labels):
+    model = AutoModelForSequenceClassification.from_pretrained(name, num_labels=num_labels)
+    model.config.output_attentions = True
+    model.config.output_hidden_states = True
+    model.config.output_values = True
 
-    if args.dataset_name == 'sst2':
-        args.num_classes = 2
-        dataset = load_dataset('glue', 'sst2')
-    elif args.dataset_name == 'tweet':
-        args.num_classes = 3
-        dataset = load_dataset('tweet_eval', 'sentiment')
-
-    args.num_training_steps = int(len(dataset['train'])/args.batch_size) * args.epochs
-    args.num_warmup_steps = int(len(dataset['train'])/args.batch_size) * min(1, int(0.1*args.epochs))
-
-    return dataset
+    return model
 
 
 if __name__ == '__main__':
@@ -58,20 +63,40 @@ if __name__ == '__main__':
 
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
-    dm = ClfDataModule(get_dataset_obj(args), args)
-    model = path_to_clf_model(args.model, args.num_classes)
-    fintuner = ClfFinetune(model, args)
+    model_name = 'bert-base-uncased'
+    dataset = load_dataset('tweet_eval', 'sentiment')
+    model = get_model(model_name, 3)
+
+    num_training_steps = int(len(dataset['train']) / args.batch_size) * args.epochs
+    num_warmup_steps = int(0.1 * num_training_steps)
+
+    dm = ClfDataModule(
+        dataset,
+        tokenizer=model_name,
+        max_length=args.max_length,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers
+    )
+
+    fintuner = ClfFinetune(
+        model,
+        num_training_steps=num_training_steps,
+        num_warmup_steps=num_warmup_steps,
+        learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay,
+        eps=args.eps,
+    )
 
     ckpt_callback = ModelCheckpoint(
         dirpath=args.ckpt_path,
         monitor='val_loss',
         mode='min',
         filename="%s-{epoch:02d}-{val_loss:.2f}"
-                 % (args.model.split('/')[-1]),
+                 % (model_name.split('/')[-1]),
     )
 
     trainer = Trainer(
-        gpus=1,
+        # gpus=1,
         plugins=[HgCkptIO()],
         max_epochs=args.epochs,
         logger=wandb_logger,

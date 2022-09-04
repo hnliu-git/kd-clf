@@ -3,11 +3,10 @@ Contains Adaptor Classes for teacher and student features adaption
 """
 
 import math
-
 import torch
-from torch import nn
-
 import torch.nn.functional as F
+
+from torch import nn
 
 
 class BaseAdaptor(nn.Module):

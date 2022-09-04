@@ -1,4 +1,3 @@
-from argparse import ArgumentParser
 from typing import Any, Dict, Optional
 from pytorch_lightning.utilities.types import _PATH
 
@@ -42,28 +41,23 @@ class HgCkptIO(CheckpointIO):
 
 class ClfFinetune(LightningModule):
 
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-        """"""
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument("--ckpt_path", default='ckpts', type=str)
+    def __init__(self, model, num_training_steps, num_warmup_steps,
+                 learning_rate=1e-4, weight_decay=5e-5, eps=1e-8):
 
-        parser.add_argument('--epochs', default=5, type=int)
-        parser.add_argument("--weight_decay", default=5e-5, type=float)
-        parser.add_argument("--learning_rate", default=2e-5, type=float)
-        parser.add_argument("--eps", default=1e-8, type=float)
-        parser.add_argument("--num_classes", default=2, type=int)
-
-        return parser
-
-    def __init__(self, model, args):
         super().__init__()
-        self.save_hyperparameters(args)
+
+        self.num_training_steps = num_training_steps
+        self.num_warmup_steps = num_warmup_steps
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.eps = eps
+
         self.model = model
 
         # Metrics
-        self.acc = torchmetrics.Accuracy(num_classes=self.hparams.num_classes)
-        self.f1 = torchmetrics.F1Score(num_classes=self.hparams.num_classes)
+        num_labels = model.config.num_labels
+        self.acc = torchmetrics.Accuracy(num_classes=num_labels)
+        self.f1 = torchmetrics.F1Score(num_classes=num_labels)
 
     def forward(self, batch):
         return self.model(**batch)
@@ -76,7 +70,7 @@ class ClfFinetune(LightningModule):
         optimizer_grouped_parameters = [
             {
                 "params": [p for n, p in parameters if not any(nd in n for nd in no_decay)],
-                "weight_decay": self.hparams.weight_decay,
+                "weight_decay": self.weight_decay,
             },
             {
                 "params": [p for n, p in parameters if any(nd in n for nd in no_decay)],
@@ -85,13 +79,13 @@ class ClfFinetune(LightningModule):
         ]
 
         optimizer = torch.optim.AdamW(optimizer_grouped_parameters,
-                                      lr=self.hparams.learning_rate,
-                                      eps=self.hparams.eps,)
+                                      lr=self.learning_rate,
+                                      eps=self.eps,)
 
         scheduler = get_linear_schedule_with_warmup(
             optimizer,
-            num_training_steps=self.hparams.num_training_steps,
-            num_warmup_steps=self.hparams.num_warmup_steps
+            num_training_steps=self.num_training_steps,
+            num_warmup_steps=self.num_warmup_steps
         )
 
         return [optimizer], [{"scheduler": scheduler, "interval": "step"}]

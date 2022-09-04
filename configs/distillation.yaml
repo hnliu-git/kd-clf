@@ -2,9 +2,7 @@
 # Data module configs
 data:
   batch_size: 32
-  val_dataset: 'sst2' # options ['sst2', 'tweet']
-  trn_dataset: 'sst2' # options ['sst2', 'tweet', 'sst2-tweet']
-  tokenizer: google/bert_uncased_L-2_H-128_A-2
+  max_length: 128
 
 # Distillation configs
 
@@ -12,20 +10,13 @@ distillation:
   epochs: 10
   learning_rate: 3e-5
   adaptors:
-    - 'HidnPKD'
+    - 'AttnMiniLM'
+    - 'ValMiniLM'
+    - 'LogitMSE'
 
 # Weight-and-bias config
 wandb:
-  project: knowledge-distillation-2steps-SOTA
+  project: knowledge-distillation-multilingual
   exp: test
-
-
-# Teacher
-teacher_model:  ckpts/bert-base-uncased-epoch=02-val_loss=0.22
-
-# Student
-student_model: ckpts/bert_H192_L4_A12-epoch=19-perplexity=14.60
-
-ckpt_path: ckpts/
 
 

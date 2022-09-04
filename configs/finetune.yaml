@@ -3,21 +3,18 @@
 data:
   batch_size: 32
   max_length: 128
-  tokenizer: google/bert_uncased_L-2_H-128_A-2
-  dataset_name: 'sst2' # options ['sst2', 'tweet']
 
-# Distillation configs
+# Training configs
 training:
   epochs: 20
   learning_rate: 3e-5
 
 # Weight-and-bias config
 wandb:
-  project: kd_final
-  exp: bert_H192_L4_A12-ft-sst2
+  project: multilingual_finetune
+  exp: xlm_roberta_base_amazon
 
-# Setting pre-trained model
-model: ckpts/bert_H192_L4_A12-epoch=19-perplexity=14.60
+# Setting save path for the fine-tuned student
 ckpt_path: ckpts/
 
 

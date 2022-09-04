@@ -9,4 +9,6 @@ RUN pip install -r requirements.txt --no-cache-dir
 
 COPY . .
 
+RUN python update_transformers.py
+
 CMD python3 finetune.py

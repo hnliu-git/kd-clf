@@ -32,32 +32,35 @@ distillation:
 wandb:
   project: test
   exp: test
-teacher_model:  ckpts/<path-to-finetuned-teacher>
-student_model: <path-to-pretrained-student>/<link-to-huggingface-model>
-ckpt_path: ckpts/
 ```
 #### Run the scripts
 
 - Distillation on prediction and intermediate layer
 ```shell
-python distillation_both.py
+python distillation_ms.py
 ```
 
 - Distillation on prediction layer
 ```shell
-python distillation_pred.py
+python distillation_ts_2nd.py
 ```
 
 - Distillation on intermediate layer
 ```shell
-python distillation_inter.py
+python distillation_ts_1st.py
 ```
 
 
 ## Comments
 
 ### Modification on Transformers Library
+To produce intermediate behaviours from Transformer models, we modified the source code of Transformers library.
+To update the library, run
+```shell
+python update_transformers.py
+```
 
+Below highlights the changes to the source code
 - [configuration_utils.py](bert/configuration_utils.py)
   - Line 257
 - [configuration_bert.py](bert/configuration_bert.py)
