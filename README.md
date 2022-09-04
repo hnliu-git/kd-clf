@@ -35,19 +35,19 @@ wandb:
 ```
 #### Run the scripts
 
-- Distillation on prediction and intermediate layer
+- Mix-Step Distillation
 ```shell
 python distillation_ms.py
 ```
 
-- Distillation on prediction layer
-```shell
-python distillation_ts_2nd.py
-```
-
-- Distillation on intermediate layer
+- Two-Step Distillation 1st step
 ```shell
 python distillation_ts_1st.py
+```
+
+- Two-Step Distillation 2nd step
+```shell
+python distillation_ts_2nd.py
 ```
 
 
