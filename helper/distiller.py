@@ -50,11 +50,10 @@ class BaseDistiller(LightningModule):
     ====================================
     """
 
-    def __init__(self, teacher, student, adaptors,
-                 num_training_steps, num_warmup_steps,
+    def __init__(self, teacher, student, adaptors,dm,
                  temperature=4, learning_rate=1e-4,
                  weight_decay=5e-5, eps=1e-8,
-                 plot_attention=True):
+                 plot_attention=False):
 
         super().__init__()
 
@@ -69,8 +68,8 @@ class BaseDistiller(LightningModule):
             'HidnPKD': HidnPKD(teacher.config.hidden_size, student.config.hidden_size),
         }
 
-        self.num_training_steps = num_training_steps
-        self.num_warmup_steps = num_warmup_steps
+        self.num_training_steps = dm.num_training_steps
+        self.num_warmup_steps = dm.num_warmup_steps
         self.plot_attention = plot_attention
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay

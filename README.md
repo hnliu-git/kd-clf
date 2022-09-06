@@ -5,49 +5,151 @@ The Transformer Distiller is a framework for knowledge distillation on Transform
 Currently, it implements distillation methods presented in TinyBERT, MiniLM, and Patient-KD. 
 
 Part of this work is in my master thesis in which I propose a two-step distilaltion method seperating prediction and 
-intermediate layer distillation and prove it produce a robust and effective student model by experiments.
-## Usage
+intermediate layer distillation and prove it produces a robust and effective student model by experiments.
 
-### Adaptor Options
-- `LogitMSE`
-- `LogitCE`
-- `AttnTinyBERT`
-- `HidnTinyBERT`
-- `EmbdTinyBERT`
-- `AttnMiniLM`
-- `ValMiniLM`
-- `HidnPKD`
-- ......
+## Workflows
 
-### Perform Knowledge Distillation
-
-#### Setup configs in [distillation.yaml](configs/distillation.yaml)
-```yaml
-distillation:
-  epochs: 10
-  learning_rate: 3e-5
-  adaptors:
-    - '<adaptor1>' 
-    - '<adaptor2>'
-wandb:
-  project: test
-  exp: test
-```
-#### Run the scripts
-
-- Mix-Step Distillation
+### Update the Transformer library
+We modify the source code to output some intermeidate behaviors of Transformer.
+A quick modification to the library can be achived by
 ```shell
-python distillation_ms.py
+python update_transformers.py
 ```
 
-- Two-Step Distillation 1st step
-```shell
-python distillation_ts_1st.py
+
+### Finetune
+Task-specific distillation usually starts with fine-tuning a teacher model.
+[`finetuner`](helper/finetuner.py) is provided to help with the first step. 
+Below shows a short script on how to use it to fine-tune a BERT model on tweet dataset.
+
+In [`finetune.py`](finetune.py), you will find how to configure finetune experiments using [finetune.yaml](configs/finetune.yaml). 
+
+```python
+from datasets import load_dataset
+from pytorch_lightning import Trainer
+from data.data_module import ClfDataModule
+from helper.finetuner import ClfFinetune, HgCkptIO
+from pytorch_lightning.callbacks import ModelCheckpoint
+from transformers import AutoModelForSequenceClassification
+
+model_name = 'bert-base-uncased'
+
+dataset = load_dataset('tweet_eval', 'sentiment')
+model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=3)
+dm = ClfDataModule(dataset, tokenizer=model_name)
+
+fintuner = ClfFinetune(model, dm)
+
+trainer = Trainer(
+    plugins=[HgCkptIO()],
+    callbacks=[ModelCheckpoint(monitor='val_loss',mode='min')]
+)
+
+trainer.fit(fintuner, dm)
 ```
 
-- Two-Step Distillation 2nd step
-```shell
-python distillation_ts_2nd.py
+### Mix-Step Distillation
+The mix-step distillation refers to the original distillation method on Transformer models.
+Both intermediate layers and the prediction layer will be updated by the defined adaptors.
+[`distiller`](helper/distiller.py) is used to perform distillation, below shows a short script on how to use it to 
+distill a fine-tuned BERT model into a compact student model.
+
+In [`distillation_ms.py`](distillation.py), you will find how to configure distillation experiments using [distillation.yaml](configs/distillation.yaml).
+
+```python
+from datasets import load_dataset
+from pytorch_lightning import Trainer
+from data.data_module import ClfDataModule
+from helper.distiller import BaseDistiller, HgCkptIO
+from pytorch_lightning.callbacks import ModelCheckpoint
+from transformers import AutoModelForSequenceClassification
+
+def get_model(name, num_labels):
+    model = AutoModelForSequenceClassification.from_pretrained(name, num_labels=num_labels)
+    model.config.output_attentions = True
+    model.config.output_hidden_states = True
+    model.config.output_values = True
+
+    return model
+
+teacher_model = '/path-to-teacher/'
+student_model = 'huawei-noah/TinyBERT_General_4L_312D'
+
+adaptors = [
+  'AttnMiniLM',
+  'ValMiniLM',
+  'LogitMSE',
+]
+
+dataset = load_dataset('tweet_eval', 'sentiment')
+teacher = get_model(teacher_model, num_labels=3)
+student = get_model(student_model, num_labels=3)
+
+dm = ClfDataModule(dataset, tokenizer=teacher_model)
+
+distiller = BaseDistiller(teacher, student, adaptors, dm)
+
+trainer = Trainer(
+    plugins=[HgCkptIO()],
+    callbacks=[ModelCheckpoint(monitor='val_loss',mode='min')]
+)
+
+trainer.fit(distiller, dm)
+```
+
+### Two-Step distillation
+Two-step distillation is a method we proposed in the project to alleviate over-fitting issue.
+The method split distillaiton into two steps, the first step only update the intermediate layers while the second step
+only update the prediction layer. Below gives an example on how to perform the two-step method.
+
+To use `wandb` to monitor the experiments, we have to separate the two steps into two files [distillation_ts_1st.py](distillation_ts_1st.py)
+and [distillation_ts_2nd.py](distillation_ts_2nd.py) or it will lead to unexpected behaviors.
+
+```python
+from datasets import load_dataset
+from pytorch_lightning import Trainer
+from data.data_module import ClfDataModule
+from helper.distiller import InterDistiller, PredDistiller, HgCkptIO
+from pytorch_lightning.callbacks import ModelCheckpoint
+from transformers import AutoModelForSequenceClassification
+
+def get_model(name, num_labels):
+    model = AutoModelForSequenceClassification.from_pretrained(name, num_labels=num_labels)
+    model.config.output_attentions = True
+    model.config.output_hidden_states = True
+    model.config.output_values = True
+
+    return model
+
+teacher_model = 'huawei-noah/TinyBERT_General_4L_312D'
+student_model = 'huawei-noah/TinyBERT_General_4L_312D'
+
+adaptors_1 = ['AttnMiniLM','ValMiniLM',]
+adaptors_2 = ['LogitMSE']
+
+dataset = load_dataset('tweet_eval', 'sentiment')
+teacher = get_model(teacher_model, num_labels=3)
+student = get_model(student_model, num_labels=3)
+
+dm = ClfDataModule(dataset, tokenizer=teacher_model)
+
+distiller_1 = InterDistiller(teacher, student, adaptors_1, dm)
+
+trainer_1 = Trainer(
+    plugins=[HgCkptIO()],
+    callbacks=[ModelCheckpoint(dirpath='student_1st', monitor='val_loss',mode='min', save_last=True)]
+)
+
+trainer_1.fit(distiller_1, dm)
+
+distiller_2 = PredDistiller(teacher, student, ['LogitMSE'], dm)
+
+trainer_2 = Trainer(
+    plugins=[HgCkptIO()],
+    callbacks=[ModelCheckpoint(dirpath='student_2nd', monitor='val_loss',mode='min', save_last=True)]
+)
+
+trainer_2.fit(distiller_2, dm)
 ```
 
 
@@ -55,10 +157,6 @@ python distillation_ts_2nd.py
 
 ### Modification on Transformers Library
 To produce intermediate behaviours from Transformer models, we modified the source code of Transformers library.
-To update the library, run
-```shell
-python update_transformers.py
-```
 
 Below highlights the changes to the source code
 - [configuration_utils.py](bert/configuration_utils.py)

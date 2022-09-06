@@ -41,13 +41,13 @@ class HgCkptIO(CheckpointIO):
 
 class ClfFinetune(LightningModule):
 
-    def __init__(self, model, num_training_steps, num_warmup_steps,
+    def __init__(self, model, dm,
                  learning_rate=1e-4, weight_decay=5e-5, eps=1e-8):
 
         super().__init__()
 
-        self.num_training_steps = num_training_steps
-        self.num_warmup_steps = num_warmup_steps
+        self.num_training_steps = dm.num_training_steps
+        self.num_warmup_steps = dm.num_warmup_steps
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.eps = eps

@@ -41,7 +41,7 @@ class ClfDataModule(LightningDataModule):
 
     def __init__(self, dataset, tokenizer,
                  max_length=128, batch_size=32,
-                 num_workers=4):
+                 epochs=4, num_workers=0):
         '''
         :param dataset:  A dataset object containing keys ['train', 'validation, 'test'],
                          see https://huggingface.co/docs/datasets/access.html
@@ -53,6 +53,8 @@ class ClfDataModule(LightningDataModule):
         self.num_workers = num_workers
 
         self.dataset = dataset
+        self.num_training_steps = int(len(dataset['train']) / batch_size) * epochs
+        self.num_warmup_steps = int(0.1 * self.num_training_steps)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
 
     def setup(self, stage: Optional[str] = None) -> None:
@@ -67,17 +69,17 @@ class ClfDataModule(LightningDataModule):
                                                                  truncation=True,
                                                                  padding='max_length',
                                                                  max_length=self.max_length),
-                                                                 num_proc=4)
+                                                                 num_proc=1)
         self.val = self.val.map(lambda e: self.tokenizer(e[self.text_col],
                                                                  truncation=True,
                                                                  padding='max_length',
                                                                  max_length=self.max_length),
-                                                                 num_proc=4)
+                                                                 num_proc=1)
         self.test = self.test.map(lambda e: self.tokenizer(e[self.text_col],
                                                                  truncation=True,
                                                                  padding='max_length',
                                                                  max_length=self.max_length),
-                                                                 num_proc=4)
+                                                                 num_proc=1)
 
     def train_dataloader(self):
         self.train_loader = DataLoader(

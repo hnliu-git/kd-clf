@@ -64,24 +64,21 @@ if __name__ == '__main__':
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
     model_name = 'bert-base-uncased'
+
     dataset = load_dataset('tweet_eval', 'sentiment')
     model = get_model(model_name, 3)
-
-    num_training_steps = int(len(dataset['train']) / args.batch_size) * args.epochs
-    num_warmup_steps = int(0.1 * num_training_steps)
 
     dm = ClfDataModule(
         dataset,
         tokenizer=model_name,
         max_length=args.max_length,
         batch_size=args.batch_size,
+        epochs=args.epochs,
         num_workers=args.num_workers
     )
 
     fintuner = ClfFinetune(
-        model,
-        num_training_steps=num_training_steps,
-        num_warmup_steps=num_warmup_steps,
+        model, dm,
         learning_rate=args.learning_rate,
         weight_decay=args.weight_decay,
         eps=args.eps,
