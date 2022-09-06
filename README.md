@@ -10,19 +10,16 @@ intermediate layer distillation and prove it produces a robust and effective stu
 ## Workflows
 
 ### Update the Transformer library
-We modify the source code to output some intermeidate behaviors of Transformer.
+We modify the source code to output some intermeidate behaviors of Transformer. More refers to the [README.md](bert/README.md)
 A quick modification to the library can be achived by
 ```shell
 python update_transformers.py
 ```
 
-
 ### Finetune
-Task-specific distillation usually starts with fine-tuning a teacher model.
+Knowledge distillation usually starts with fine-tuning a teacher model.
 [`finetuner`](helper/finetuner.py) is provided to help with the first step. 
 Below shows a short script on how to use it to fine-tune a BERT model on tweet dataset.
-
-In [`finetune.py`](finetune.py), you will find how to configure finetune experiments using [finetune.yaml](configs/finetune.yaml). 
 
 ```python
 from datasets import load_dataset
@@ -48,13 +45,13 @@ trainer = Trainer(
 trainer.fit(fintuner, dm)
 ```
 
+In [`finetune.py`](finetune.py), you will find how to configure finetune experiments using [finetune.yaml](configs/finetune.yaml).
+
 ### Mix-Step Distillation
 The mix-step distillation refers to the original distillation method on Transformer models.
 Both intermediate layers and the prediction layer will be updated by the defined adaptors.
 [`distiller`](helper/distiller.py) is used to perform distillation, below shows a short script on how to use it to 
 distill a fine-tuned BERT model into a compact student model.
-
-In [`distillation_ms.py`](distillation.py), you will find how to configure distillation experiments using [distillation.yaml](configs/distillation.yaml).
 
 ```python
 from datasets import load_dataset
@@ -97,13 +94,12 @@ trainer = Trainer(
 trainer.fit(distiller, dm)
 ```
 
+In [`distillation_ms.py`](distillation.py), you will find how to configure distillation experiments using [distillation.yaml](configs/distillation.yaml).
+
 ### Two-Step distillation
 Two-step distillation is a method we proposed in the project to alleviate over-fitting issue.
 The method split distillaiton into two steps, the first step only update the intermediate layers while the second step
 only update the prediction layer. Below gives an example on how to perform the two-step method.
-
-To use `wandb` to monitor the experiments, we have to separate the two steps into two files [distillation_ts_1st.py](distillation_ts_1st.py)
-and [distillation_ts_2nd.py](distillation_ts_2nd.py) or it will lead to unexpected behaviors.
 
 ```python
 from datasets import load_dataset
@@ -151,27 +147,8 @@ trainer_2 = Trainer(
 
 trainer_2.fit(distiller_2, dm)
 ```
-
-
-## Comments
-
-### Modification on Transformers Library
-To produce intermediate behaviours from Transformer models, we modified the source code of Transformers library.
-
-Below highlights the changes to the source code
-- [configuration_utils.py](bert/configuration_utils.py)
-  - Line 257
-- [configuration_bert.py](bert/configuration_bert.py)
-  - `BertConfig`
-- [modeling_outputs.py](bert/modeling_outputs.py)
-  - `SequenceClassifierOutput`
-  - `BaseModelOutputWithPoolingAndCrossAttentions`
-  - `BaseModelOutputWithPastAndCrossAttentions`
-- [modeling_bert.py](bert/modeling_bert.py)
-    - Add `output_values` parameter
-    - Output attention matrices before dropout in `BertSelfAttention`
-    - Modified `BertModel` so that it can collect `values`
-    - Modified `BertSelfAttention` so that it output `value`
+To use `wandb` to monitor the experiments, we have to separate the two steps into two files [distillation_ts_1st.py](distillation_ts_1st.py)
+and [distillation_ts_2nd.py](distillation_ts_2nd.py) or it will lead to unexpected behaviors.
 
 ## Citations
 TextBrewer
