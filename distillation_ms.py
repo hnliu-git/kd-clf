@@ -1,4 +1,4 @@
-import yaml
+
 import pytorch_lightning as pl
 
 from data.data_module import ClfDataModule
@@ -6,51 +6,10 @@ from helper.distiller import BaseDistiller
 
 from utils import *
 from datasets import load_dataset
-from argparse import ArgumentParser
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.callbacks import LearningRateMonitor
 from transformers import AutoModelForSequenceClassification
-
-
-def get_args(yaml_path):
-    parser = ArgumentParser()
-
-    # Wandb
-    parser.add_argument('--project', type=str,
-                        help='wandb project name')
-    parser.add_argument('--exp', type=str,
-                        help='wandb experiement name')
-
-    # Data configs
-    parser.add_argument("--batch_size", type=int, default=256,
-                        help="Batch size.")
-    parser.add_argument('--max_length', type=int, default=128,
-                        help='max sequence length')
-    parser.add_argument("--num_workers", type=int, default=8,
-                        help="Number of workers for data loading.")
-    parser.add_argument("--tokenizer", type=str, default="prajjwal1/bert-tiny",
-                        help="tokenizer model")
-
-    # Teacher Model
-    parser.add_argument("--teacher_model", default='bert-base-uncased', type=str,
-                        help="name of the teacher model")
-
-
-    # Distillation configs
-    parser.add_argument('--adaptors', default=[], type=list)
-    parser.add_argument("--epochs", default=5, type=int)
-    parser.add_argument("--temperature", default=4, type=float)
-
-    # Optimizer configs
-    parser.add_argument("--learning_rate", default=1e-4, type=float)
-    parser.add_argument("--weight_decay", default=5e-5, type=float)
-    parser.add_argument("--eps", default=1e-8, type=float)
-
-    config = yaml.load(open(yaml_path), Loader=yaml.FullLoader)
-    args = parser.parse_args(serialize_config(config))
-
-    return args
 
 
 def get_model(name, num_labels):
@@ -67,7 +26,7 @@ if __name__ == '__main__':
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     pl.seed_everything(2022)
-    args = get_args('configs/distillation.yaml')
+    args = get_distillation_args('configs/distillation.yaml')
 
     # Logger
     wandb_logger = WandbLogger(project=args.project, name=args.exp)

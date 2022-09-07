@@ -1,50 +1,14 @@
-import yaml
-from datasets import load_dataset
+
 import pytorch_lightning as pl
 
-from utils import *
-from argparse import ArgumentParser
+from datasets import load_dataset
+from utils import get_finetune_args
 from pytorch_lightning import Trainer
 from data.data_module import ClfDataModule
 from pytorch_lightning.loggers import WandbLogger
 from helper.finetuner import ClfFinetune, HgCkptIO
 from pytorch_lightning.callbacks import ModelCheckpoint
 from transformers import AutoModelForSequenceClassification
-
-
-def get_args(yaml_path):
-    parser = ArgumentParser()
-
-    # Wandb
-    parser.add_argument('--project', type=str,
-                        help='wandb project name')
-    parser.add_argument('--exp', type=str,
-                        help='wandb experiement name')
-
-    # Dataset
-    parser.add_argument('--dataset_name', type=str)
-    parser.add_argument("--batch_size", type=int, default=256,
-                        help="Batch size.")
-    parser.add_argument('--max_length', type=int, default=128,
-                        help='max sequence length')
-    parser.add_argument("--num_workers", type=int, default=8,
-                        help="Number of workers for data loading.")
-
-    # Model
-    parser.add_argument("--ckpt_path", default='ckpts', type=str)
-
-    # Training configs
-    parser.add_argument("--epochs", default=5, type=int)
-
-    # Optimizer configs
-    parser.add_argument("--learning_rate", default=1e-4, type=float)
-    parser.add_argument("--weight_decay", default=5e-5, type=float)
-    parser.add_argument("--eps", default=1e-8, type=float)
-
-    config = yaml.load(open(yaml_path), Loader=yaml.FullLoader)
-    args = parser.parse_args(serialize_config(config))
-
-    return args
 
 
 def get_model(name, num_labels):
@@ -59,7 +23,7 @@ def get_model(name, num_labels):
 if __name__ == '__main__':
 
     pl.seed_everything(2022)
-    args = get_args('configs/finetune.yaml')
+    args = get_finetune_args('configs/finetune.yaml')
 
     wandb_logger = WandbLogger(project=args.project, name=args.exp)
 
