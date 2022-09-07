@@ -24,4 +24,5 @@ wandb:
   project: knowledge-distillation-multilingual
   exp: test
 
+ckpt_path: ckpts/
 
