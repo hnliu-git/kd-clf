@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 from data.data_module import ClfDataModule
 from helper.distiller import BaseDistiller
 
-from utils import *
+from utils import get_distillation_args
 from datasets import load_dataset
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import WandbLogger
