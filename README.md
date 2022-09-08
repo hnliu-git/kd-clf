@@ -150,6 +150,18 @@ trainer_2.fit(distiller_2, dm)
 To use `wandb` to monitor the experiments, we have to separate the two steps into two files [distillation_ts_1st.py](distillation_ts_1st.py)
 and [distillation_ts_2nd.py](distillation_ts_2nd.py) or it will lead to unexpected behaviors.
 
+### Adaptor Options
+Adaptor is the module define how to calculate loss between a student layer and a teacher layer.
+Current available options in configuration file are:
+- `AttnMiniLM`: KLD between attention matrices
+- `AttnTinyBERT`: MSE between attention matrices
+- `ValMiniLM`: KLD between value matrices
+- `HidnTinyBERT`: MSE between hidden states
+- `HidnPKD`: MSE between the `[CLS]` token vectors
+- `LogitMSE`: MSE between logits after softmax
+- `LogitCE`: CE between logits after softmax
+
+
 ## Citations
 TextBrewer
 ```bibtex
